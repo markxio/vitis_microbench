@@ -1,7 +1,10 @@
 
 
 class Kernel:
-    def __init__(self, dtype, external_data_width, op, impl, func):
+    def __init__(self):
+        return
+
+    def get(self, dtype, external_data_width, op, impl, func):
         return f"""
 #include "hls_stream.h"
 

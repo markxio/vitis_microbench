@@ -31,7 +31,7 @@ static DT bench(DT val) {{
 }}
                """
 
-    def generate(self, op, impl, symbol) -> str:
+    def write_kernel(self, op, impl, symbol) -> bool:
         first_char = op[0]
         if "h" == first_char:
             dtype = "half"
@@ -47,10 +47,10 @@ static DT bench(DT val) {{
        
         if "add" in op or "sub" in op or "mul" in op or "div" in op:
             # arithmetic
-            kernel_str = kernel_arithmetic(dtype=dtype, external_data_width=external_data_width, op=op, impl=impl, sign=symbol)
+            kernel_str = kernel_arithmetic().get(dtype=dtype, external_data_width=external_data_width, op=op, impl=impl, sign=symbol)
         else:
             # algebraic
-            kernel_str = kernel_algebraic(dtype=dtype, external_data_width=external_data_width, op=op, impl=impl, func=symbol)
+            kernel_str = kernel_algebraic().get(dtype=dtype, external_data_width=external_data_width, op=op, impl=impl, func=symbol)
 
         # write kernel to file
         with open(f"../src/device/{op}_{impl}.cpp", "w+") as f:
@@ -62,10 +62,10 @@ static DT bench(DT val) {{
         config = pd.read_csv(csv_file)
 
         arithmetic = config[config["Sign"]!="0"]
-        arithmetic["kernel"] = arithmetic.apply(lambda row: generate(op=row.Operation, impl=row.Implementation, symbol=row.Sign), axis=1)
+        arithmetic["kernel"] = arithmetic.apply(lambda row: self.write_kernel(op=row.Operation, impl=row.Implementation, symbol=row.Sign), axis=1)
         
         algebraic = config[config["Function"]!="0"]
-        algebraic["bench"] = algebraic.apply(lambda row: generate(op=row.Operation, impl=row.Implementation, symbol=row.Function), axis=1)
+        algebraic["kernel"] = algebraic.apply(lambda row: self.write_kernel(op=row.Operation, impl=row.Implementation, symbol=row.Function), axis=1)
 
 if __name__=="__main__":
     gen = Generator()
