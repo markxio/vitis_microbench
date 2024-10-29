@@ -18,10 +18,10 @@ fmul,fulldsp,0,9,*,0
 fmul,maxdsp,0,7,*,0
 fmul,primitivedsp,0,4,*,0
 fsqrt,fabric,0,29,0,sqrt
-frsqrt,fabric,0,38,0,sqrt
-frsqrt,fulldsp,0,33,0,sqrt
-frecip,fabric,0,37,0,inv
-frecip,fulldsp,0,30,0,inv
+frsqrt,fabric,0,38,0,rsqrt
+frsqrt,fulldsp,0,33,0,rsqrt
+frecip,fabric,0,37,0,recip
+frecip,fulldsp,0,30,0,recip
 dadd,fabric,0,13,+,0
 dadd,fulldsp,0,15,+,0
 dsub,fabric,0,13,-,0
@@ -38,8 +38,8 @@ dmul,meddsp,0,13,*,0
 dmul,fulldsp,0,13,*,0
 dmul,maxdsp,0,14,*,0
 dsqrt,fabric,0,58,0,sqrt
-drsqrt,fulldsp,0,111,0,sqrt
-drecip,fulldsp,0,36,0,inv
+drsqrt,fulldsp,0,111,0,rsqrt
+drecip,fulldsp,0,36,0,recip
 hadd,fabric,0,9,+,0
 hadd,meddsp,0,12,+,0
 hadd,fulldsp,0,12,+,0

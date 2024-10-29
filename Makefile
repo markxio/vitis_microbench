@@ -58,11 +58,14 @@ $(OBJECTS): %.xo : $(DEVICE_SRCDIR)/%.cpp
 $(XCLBIN): $(OBJECTS)
   cd reference_files_$(TARGET) ; v++ $(KRNL_LINK_OPTS) -l -o'$@' $(+)
 
-.PHONY: $(HOST_EXE)
-# Building Host
-$(HOST_EXE): src/host/host.cpp
+host_algebraic: src/host/host_algebraic.cpp
   mkdir -p bin
-  g++ $(CXXFLAGS) -o bin/host '$<' $(CXXFLAGS2)
+  g++ $(CXXFLAGS) -o bin/host_algebraic '$<' $(CXXFLAGS2)
+
+host_arithmetic: src/host/host_arithmetic.cpp
+  mkdir -p bin
+  g++ $(CXXFLAGS) -o bin/host_arithmetic '$<' $(CXXFLAGS2)
+
 
 .PHONY: emconfig
 emconfig:
