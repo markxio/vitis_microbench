@@ -32,9 +32,9 @@ static void write_data(hls::stream<DEVICE_DTYPE>&, struct packed_data*, int);
 
 extern "C" {{
 void krnl_bench(struct packed_data * val1, struct packed_data * val2, struct packed_data * result, int num_its) {{
-#pragma HLS INTERFACE m_axi port=val1 offset=slave bundle=gmem
-#pragma HLS INTERFACE m_axi port=val2 offset=slave bundle=gmem
-#pragma HLS INTERFACE m_axi port=result offset=slave bundle=gmem
+#pragma HLS INTERFACE m_axi port=val1 offset=slave bundle=val1_port
+#pragma HLS INTERFACE m_axi port=val2 offset=slave bundle=val2_port
+#pragma HLS INTERFACE m_axi port=result offset=slave bundle=result_port
 
 #pragma HLS INTERFACE s_axilite port=val1 bundle=control
 #pragma HLS INTERFACE s_axilite port=val2 bundle=control
