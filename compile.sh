@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TARGET=sw_emu
+TARGET=hw
 
 # remove tmp dirs
 rm -rf reference_files_${TARGET}_fadd_fabric          

@@ -1,8 +1,8 @@
 #!/bin/bash
 
-TARGET=sw_emu
-number_of_runs=1
-reps=1000 # number of elements
+TARGET=hw
+number_of_runs=100
+reps=10000000 # number of elements
 
 # on u280
 # no primitivedsp
@@ -59,7 +59,7 @@ bitstreams=(
 )
 
 for bitstream in "${bitstreams[@]}"; do
-    if [ $bitstream == *"add"* ] || [ $bitstream == *"sub"* ] || [ $bitstream == *"mul"* ] || [ $bitstream == *"div"* ]; then
+    if [[ $bitstream == *"add"* ]] || [[ $bitstream == *"sub"* ]] || [[ $bitstream == *"mul"* ]] || [[ $bitstream == *"div"* ]]; then
         host=host_arithmetic
     else
         host=host_algebraic 

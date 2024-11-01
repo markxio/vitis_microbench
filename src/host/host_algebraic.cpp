@@ -14,9 +14,11 @@
 // Memory page size, ensures that memory is aligned to the boundary for performance
 #define PAGESIZE 4096
 
-static void write_to_csv(char * binary_filename, int run_id, int elements, float copy_on, float exec, float copy_off);
+static void write_to_csv(char * binary_filename, int run_id, int elements, float copy_on, float exec, float copy_off, double, double);
 static void init_device(char*, int);
-static void execute_on_device(cl::Event&,cl::Event&,cl::Event&);
+static void copy_on(cl::Event&);
+static void execute_on_device(cl::Event&,cl::Event&);
+static void copy_off(cl::Event&,cl::Event&,cl::Event&);
 static void init_problem(int);
 static float getTimeOfComponent(cl::Event&);
 
@@ -42,27 +44,28 @@ int main(int argc, char * argv[]) {
   init_problem(data_size);
   init_device(argv[1], data_size);
 
-
+  copy_on(copyOnEvent);
   bool stop_measurement = false;
-  #pragma omp parallel shared(stop_measurement, cardPowerAvgInWatt, copyOnEvent, kernelExecutionEvent, copyOffEvent) num_threads(2)
+  #pragma omp parallel shared(stop_measurement, cardPowerAvgInWatt, copyOnEvent, kernelExecutionEvent) num_threads(2)
   {
       int tid = omp_get_thread_num();
       if(tid == 0) {
-        execute_on_device(copyOnEvent, kernelExecutionEvent, copyOffEvent);
+        execute_on_device(copyOnEvent, kernelExecutionEvent);
       } else {
-          //cardPowerAvgInWatt = vitis_power::measureFpgaPower(stop_measurement);
-          cardPowerAvgInWatt = 9.99;
+          cardPowerAvgInWatt = vitis_power::measureFpgaPower(stop_measurement);
+          //cardPowerAvgInWatt = 9.99;
       }
       stop_measurement = true;
   }
-  
+  copy_off(copyOnEvent, kernelExecutionEvent, copyOffEvent);
+
   float kernelTime=getTimeOfComponent(kernelExecutionEvent);
   float copyOnTime=getTimeOfComponent(copyOnEvent);
   float copyOffTime=getTimeOfComponent(copyOffEvent);
   
   printf("Total runtime: %f ms, (%f ms xfer on, %f ms execute, %f ms xfer off) for %d elements; Avg card power: %f W; kernelTimeEnergy: %f J\n", copyOnTime+kernelTime+copyOffTime, copyOnTime, kernelTime, copyOffTime, data_size, cardPowerAvgInWatt, cardPowerAvgInWatt*(kernelTime/1000));    
 
-  write_to_csv(argv[1], run_id, data_size, copyOnTime, kernelTime, copyOffTime);
+  write_to_csv(argv[1], run_id, data_size, copyOnTime, kernelTime, copyOffTime, cardPowerAvgInWatt, cardPowerAvgInWatt*(kernelTime/1000));
  
   delete buffer_input;
   delete buffer_result;
@@ -89,16 +92,26 @@ static float getTimeOfComponent(cl::Event & event) {
 * Performs execution on the device by transfering input data, running the kernel, and copying result data back
 * We use OpenCL events here to set the dependencies properly
 */
-static void execute_on_device(cl::Event & copyOnEvent, cl::Event & kernelExecutionEvent, cl::Event & copyOffEvent) {
+static void copy_on(cl::Event & copyOnEvent) {
   cl_int err;
 
   // Queue migration of memory objects from host to device (last argument 0 means from host to device)
   OCL_CHECK(err, err = command_queue->enqueueMigrateMemObjects({*buffer_input}, 0, nullptr, &copyOnEvent));	
+  OCL_CHECK(err, err = command_queue->finish());
+}
+
+static void execute_on_device(cl::Event & copyOnEvent, cl::Event & kernelExecutionEvent) {
+  cl_int err;
 
   // Queue kernel execution
   std::vector<cl::Event> kernel_wait_events;
   kernel_wait_events.push_back(copyOnEvent);
   OCL_CHECK(err, err = command_queue->enqueueTask(*sum_kernel, &kernel_wait_events, &kernelExecutionEvent));
+  OCL_CHECK(err, err = command_queue->finish());
+}
+
+static void copy_off(cl::Event & copyOnEvent, cl::Event & kernelExecutionEvent, cl::Event & copyOffEvent) {
+  cl_int err;
 
   // Queue copy result data back from kernel
   std::vector<cl::Event> data_transfer_wait_events;
@@ -139,18 +152,19 @@ static void init_device(char * binary_filename, int data_size) {
 static void init_problem(int data_size) {
   input_data=(DATA_TYPE*) memalign(PAGESIZE, sizeof(DATA_TYPE) * data_size);
   result_data=(DATA_TYPE*) memalign(PAGESIZE, sizeof(DATA_TYPE) * data_size);
+#pragma omp parallel for
   for (int i=0;i<data_size;i++) {
     input_data[i]=(DATA_TYPE) i;
   }
 }
 
-static void write_to_csv(char * binary_filename, int run_id, int elements, float copy_on, float exec, float copy_off) {
+static void write_to_csv(char * binary_filename, int run_id, int elements, float copy_on, float exec, float copy_off, double power_watt, double energy_joule) {
   std::stringstream ss;
-  if (run_id==1) {
-    ss << "bitstream,run_id,elements,total_runtime_ms,copy_on_ms,execute_ms,copy_off_ms" << std::endl;
+  if (run_id==0) {
+    ss << "bitstream,run_id,elements,total_runtime_ms,copy_on_ms,execute_ms,copy_off_ms,power_w,energy_j" << std::endl;
   }
 
-  ss << binary_filename << "," << run_id << "," << elements << "," << copy_on+exec+copy_off << "," << copy_on << "," << exec << "," << copy_off << std::endl;
+  ss << binary_filename << "," << run_id << "," << elements << "," << copy_on+exec+copy_off << "," << copy_on << "," << exec << "," << copy_off << "," << power_watt << "," << energy_joule << std::endl;
 
   std::string outdir = "output";
   struct stat buffer;

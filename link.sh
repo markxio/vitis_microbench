@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TARGET=sw_emu
+TARGET=hw
 
 cd reference_files_${TARGET}_fadd_fabric       ; v++ -t ${TARGET} --config ../link.cfg -O3 -l -o"fadd_fabric.${TARGET}.xclbin" fadd_fabric.xo                 &     
 cd ../reference_files_${TARGET}_fadd_fulldsp      ; v++ -t ${TARGET} --config ../link_arithmetic.cfg -j 8 -O3 -l -o"fadd_fulldsp.${TARGET}.xclbin" fadd_fulldsp.xo            &          
@@ -10,6 +10,9 @@ cd ../reference_files_${TARGET}_fsub_fulldsp      ; v++ -t ${TARGET} --config ..
 cd ../reference_files_${TARGET}_fsub_primitivedsp ; v++ -t ${TARGET} --config ../link_arithmetic.cfg -j 8 -O3 -l -o"fsub_primitivedsp.${TARGET}.xclbin" fsub_primitivedsp.xo  &                    
 cd ../reference_files_${TARGET}_fdiv_fabric       ; v++ -t ${TARGET} --config ../link_arithmetic.cfg -j 8 -O3 -l -o"fdiv_fabric.${TARGET}.xclbin" fdiv_fabric.xo              &        
 cd ../reference_files_${TARGET}_fexp_fabric       ; v++ -t ${TARGET} --config ../link_algebraic.cfg -j 8 -O3 -l -o"fexp_fabric.${TARGET}.xclbin" fexp_fabric.xo              &        
+
+wait
+
 cd ../reference_files_${TARGET}_fexp_meddsp       ; v++ -t ${TARGET} --config ../link_algebraic.cfg -j 8 -O3 -l -o"fexp_meddsp.${TARGET}.xclbin" fexp_meddsp.xo              &        
 cd ../reference_files_${TARGET}_fexp_fulldsp      ; v++ -t ${TARGET} --config ../link_algebraic.cfg -j 8 -O3 -l -o"fexp_fulldsp.${TARGET}.xclbin" fexp_fulldsp.xo            &          
 cd ../reference_files_${TARGET}_flog_fabric       ; v++ -t ${TARGET} --config ../link_algebraic.cfg -j 8 -O3 -l -o"flog_fabric.${TARGET}.xclbin" flog_fabric.xo              &        
@@ -18,6 +21,9 @@ cd ../reference_files_${TARGET}_flog_fulldsp      ; v++ -t ${TARGET} --config ..
 cd ../reference_files_${TARGET}_fmul_fabric       ; v++ -t ${TARGET} --config ../link_arithmetic.cfg -j 8 -O3 -l -o"fmul_fabric.${TARGET}.xclbin" fmul_fabric.xo              &        
 cd ../reference_files_${TARGET}_fmul_meddsp       ; v++ -t ${TARGET} --config ../link_arithmetic.cfg -j 8 -O3 -l -o"fmul_meddsp.${TARGET}.xclbin" fmul_meddsp.xo              &        
 cd ../reference_files_${TARGET}_fmul_fulldsp      ; v++ -t ${TARGET} --config ../link_arithmetic.cfg -j 8 -O3 -l -o"fmul_fulldsp.${TARGET}.xclbin" fmul_fulldsp.xo            &          
+
+wait
+
 cd ../reference_files_${TARGET}_fmul_maxdsp       ; v++ -t ${TARGET} --config ../link_arithmetic.cfg -j 8 -O3 -l -o"fmul_maxdsp.${TARGET}.xclbin" fmul_maxdsp.xo              &        
 cd ../reference_files_${TARGET}_fmul_primitivedsp ; v++ -t ${TARGET} --config ../link_arithmetic.cfg -j 8 -O3 -l -o"fmul_primitivedsp.${TARGET}.xclbin" fmul_primitivedsp.xo  &                    
 cd ../reference_files_${TARGET}_fsqrt_fabric      ; v++ -t ${TARGET} --config ../link_algebraic.cfg -j 8 -O3 -l -o"fsqrt_fabric.${TARGET}.xclbin" fsqrt_fabric.xo            &          
@@ -38,6 +44,9 @@ cd ../reference_files_${TARGET}_dexp_meddsp       ; v++ -t ${TARGET} --config ..
 cd ../reference_files_${TARGET}_dexp_fulldsp      ; v++ -t ${TARGET} --config ../link_algebraic.cfg -j 8 -O3 -l -o"dexp_fulldsp.${TARGET}.xclbin" dexp_fulldsp.xo            &          
 cd ../reference_files_${TARGET}_dlog_fabric       ; v++ -t ${TARGET} --config ../link_algebraic.cfg -j 8 -O3 -l -o"dlog_fabric.${TARGET}.xclbin" dlog_fabric.xo              &        
 cd ../reference_files_${TARGET}_dlog_meddsp       ; v++ -t ${TARGET} --config ../link_algebraic.cfg -j 8 -O3 -l -o"dlog_meddsp.${TARGET}.xclbin" dlog_meddsp.xo              &        
+
+wait
+
 cd ../reference_files_${TARGET}_dlog_fulldsp      ; v++ -t ${TARGET} --config ../link_algebraic.cfg -j 8 -O3 -l -o"dlog_fulldsp.${TARGET}.xclbin" dlog_fulldsp.xo            &          
 cd ../reference_files_${TARGET}_dmul_fabric       ; v++ -t ${TARGET} --config ../link_arithmetic.cfg -j 8 -O3 -l -o"dmul_fabric.${TARGET}.xclbin" dmul_fabric.xo              &        
 cd ../reference_files_${TARGET}_dmul_meddsp       ; v++ -t ${TARGET} --config ../link_arithmetic.cfg -j 8 -O3 -l -o"dmul_meddsp.${TARGET}.xclbin" dmul_meddsp.xo              &        
@@ -46,6 +55,9 @@ cd ../reference_files_${TARGET}_dmul_maxdsp       ; v++ -t ${TARGET} --config ..
 cd ../reference_files_${TARGET}_dsqrt_fabric      ; v++ -t ${TARGET} --config ../link_algebraic.cfg -j 8 -O3 -l -o"dsqrt_fabric.${TARGET}.xclbin" dsqrt_fabric.xo            &          
 cd ../reference_files_${TARGET}_drsqrt_fulldsp    ; v++ -t ${TARGET} --config ../link_algebraic.cfg -j 8 -O3 -l -o"drsqrt_fulldsp.${TARGET}.xclbin" drsqrt_fulldsp.xo        &              
 cd ../reference_files_${TARGET}_drecip_fulldsp    ; v++ -t ${TARGET} --config ../link_algebraic.cfg -j 8 -O3 -l -o"drecip_fulldsp.${TARGET}.xclbin" drecip_fulldsp.xo        &              
+
+wait
+
 cd ../reference_files_${TARGET}_hadd_fabric       ; v++ -t ${TARGET} --config ../link_arithmetic.cfg -j 8 -O3 -l -o"hadd_fabric.${TARGET}.xclbin" hadd_fabric.xo              &        
 cd ../reference_files_${TARGET}_hadd_meddsp       ; v++ -t ${TARGET} --config ../link_arithmetic.cfg -j 8 -O3 -l -o"hadd_meddsp.${TARGET}.xclbin" hadd_meddsp.xo              &        
 cd ../reference_files_${TARGET}_hadd_fulldsp      ; v++ -t ${TARGET} --config ../link_arithmetic.cfg -j 8 -O3 -l -o"hadd_fulldsp.${TARGET}.xclbin" hadd_fulldsp.xo            &          
