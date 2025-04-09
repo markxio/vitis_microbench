@@ -52,8 +52,8 @@ int main(int argc, char * argv[]) {
       if(tid == 0) {
         execute_on_device(copyOnEvent, kernelExecutionEvent);
       } else {
-          cardPowerAvgInWatt = vitis_power::measureFpgaPower(stop_measurement);
-          //cardPowerAvgInWatt = 9.99;
+          //cardPowerAvgInWatt = vitis_power::VCK5000::measureFpgaPower(stop_measurement);
+          cardPowerAvgInWatt = vitis_power::U280::measureFpgaPower(stop_measurement);
       }
       stop_measurement = true;
   }
@@ -129,7 +129,7 @@ static void init_device(char * binary_filename, int data_size) {
   cl_int err;
 
   std::vector<cl::Device> devices;
-  std::tie(program, context, devices)=initialiseDevice("Xilinx", "u280", binary_filename);
+  std::tie(program, context, devices)=initialiseDevice("Xilinx", "u280", binary_filename); // vck
 
   // Create the command queue (and enable profiling so we can get performance data back)
   OCL_CHECK(err, command_queue=new cl::CommandQueue(*context, devices[0], CL_QUEUE_PROFILING_ENABLE, &err));
@@ -178,7 +178,7 @@ static void write_to_csv(char * binary_filename, int run_id, int elements, float
 
   std::ofstream outFile;
   //outFile.open(outdir + "/runtime.csv", std::ios_base::trunc);
-  outFile.open(outdir + "/runtime.csv", std::ios_base::app);
+  outFile.open(outdir + "/runtime_u280_fixed_point.csv", std::ios_base::app);
   outFile << ss.str();
   outFile.close();
 }
