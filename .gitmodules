@@ -1,3 +1,6 @@
 [submodule "vitis-power"]
 	path = vitis-power
 	url = https://github.com/markxio/vitis-power
+[submodule "vitis-data"]
+	path = vitis-data
+	url = git@github.com:markxio/vitis-data.git

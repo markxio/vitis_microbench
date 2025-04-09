@@ -10,8 +10,8 @@ def print_min_max_std(myfiles: list, mytype: str):
     min_std=1.00
     max_std=0.00
 
-    min_mean=0.00
-    max_mean=0.00
+    min_mean=1.0
+    max_mean=1.0
 
     for myfile in myfiles:
         df=pd.read_csv(f"run_stats/{myfile}", index_col=0)

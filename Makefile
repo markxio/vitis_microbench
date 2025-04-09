@@ -35,7 +35,7 @@ CXXFLAGS2 := -lxilinxopencl
 
 # Kernel compiler & linker global settings
 KRNL_COMPILE_OPTS := -t $(TARGET) --config ../design.cfg --save-temps -O3
-KRNL_LINK_OPTS := -t $(TARGET) --config ../link.cfg -O3
+KRNL_LINK_OPTS := -t $(TARGET) --config ../link.cfg --save-temps -O3
 
 build:  $(XO) $(XCLBIN) $(HOST_EXE) emconfig
   
@@ -57,6 +57,10 @@ $(OBJECTS): %.xo : $(DEVICE_SRCDIR)/%.cpp
 .PHONY: $(XCLBIN)
 $(XCLBIN): $(OBJECTS)
   cd reference_files_$(TARGET) ; v++ $(KRNL_LINK_OPTS) -l -o'$@' $(+)
+
+host: src/host/host.cpp
+  mkdir -p bin
+  g++ $(CXXFLAGS) -o bin/host '$<' $(CXXFLAGS2)
 
 host_algebraic: src/host/host_algebraic.cpp
   mkdir -p bin

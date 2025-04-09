@@ -1,72 +1,41 @@
 #!/bin/bash
 
-TARGET=hw
-number_of_runs=100
-reps=10000000 # number of elements
+# same host for fixed- and floating-point
+# same host for u280 and vck
+# arithmetic requires two inputs
+# algebraic requires one input
 
-# on u280
-# no primitivedsp
-bitstreams=(
-    "dadd_fabric.${TARGET}.xclbin"
-    "dadd_fulldsp.${TARGET}.xclbin"
-    "ddiv_fabric.${TARGET}.xclbin"
-    "dexp_fabric.${TARGET}.xclbin"
-    "dexp_fulldsp.${TARGET}.xclbin"
-    "dexp_meddsp.${TARGET}.xclbin"
-    "dlog_fabric.${TARGET}.xclbin"
-    "dlog_fulldsp.${TARGET}.xclbin"
-    "dlog_meddsp.${TARGET}.xclbin"
-    "dmul_fabric.${TARGET}.xclbin"
-    "dmul_fulldsp.${TARGET}.xclbin"
-    "dmul_maxdsp.${TARGET}.xclbin"
-    "dmul_meddsp.${TARGET}.xclbin"
-    "drecip_fulldsp.${TARGET}.xclbin"
-    "drsqrt_fulldsp.${TARGET}.xclbin"
-    "dsqrt_fabric.${TARGET}.xclbin"
-    "dsub_fabric.${TARGET}.xclbin"
-    "dsub_fulldsp.${TARGET}.xclbin"
-    "fadd_fabric.${TARGET}.xclbin"
-    "fadd_fulldsp.${TARGET}.xclbin"
-    "fdiv_fabric.${TARGET}.xclbin"
-    "fexp_fabric.${TARGET}.xclbin"
-    "fexp_fulldsp.${TARGET}.xclbin"
-    "fexp_meddsp.${TARGET}.xclbin"
-    "flog_fabric.${TARGET}.xclbin"
-    "flog_fulldsp.${TARGET}.xclbin"
-    "flog_meddsp.${TARGET}.xclbin"
-    "fmul_fabric.${TARGET}.xclbin"
-    "fmul_fulldsp.${TARGET}.xclbin"
-    "fmul_maxdsp.${TARGET}.xclbin"
-    "fmul_meddsp.${TARGET}.xclbin"
-    "frecip_fabric.${TARGET}.xclbin"
-    "frecip_fulldsp.${TARGET}.xclbin"
-    "frsqrt_fabric.${TARGET}.xclbin"
-    "frsqrt_fulldsp.${TARGET}.xclbin"
-    "fsqrt_fabric.${TARGET}.xclbin"
-    "fsub_fabric.${TARGET}.xclbin"
-    "fsub_fulldsp.${TARGET}.xclbin"
-    "hadd_fabric.${TARGET}.xclbin"
-    "hadd_fulldsp.${TARGET}.xclbin"
-    "hadd_meddsp.${TARGET}.xclbin"
-    "hdiv_fabric.${TARGET}.xclbin"
-    "hmul_fabric.${TARGET}.xclbin"
-    "hmul_fulldsp.${TARGET}.xclbin"
-    "hmul_maxdsp.${TARGET}.xclbin"
-    "hsqrt_fabric.${TARGET}.xclbin"
-    "hsub_fabric.${TARGET}.xclbin"
-    "hsub_fulldsp.${TARGET}.xclbin"
-    "hsub_meddsp.${TARGET}.xclbin"
-)
+# bin/host_arithmetic bin/u280/multi/dadd_fabric.hw.xclbin reps=10000 run_number=1 fpga=u280 cus=10 fp_type=floating-point
 
 for bitstream in "${bitstreams[@]}"; do
     if [[ $bitstream == *"add"* ]] || [[ $bitstream == *"sub"* ]] || [[ $bitstream == *"mul"* ]] || [[ $bitstream == *"div"* ]]; then
-        host=host_arithmetic
+        if [[ $FPGA == "u280" ]]; then
+            #host=host_arithmetic
+            number_cus=10
+        else
+            # vck
+            #number_cus=28 # out of device resources
+            number_cus=16
+        fi
     else
-        host=host_algebraic 
+        if [[ $FPGA == "u280" ]]; then
+            #host=host_algebraic 
+            number_cus=16
+        else
+            # vck
+            #number_cus=30 # out of device resources
+            number_cus=25
+        fi
     fi
+
+    if [[ $KERNEL_TYPE == "single" ]]; then
+        number_cus=1
+    fi
+
     for run_id in $(seq 1 $(($number_of_runs))); do
         echo $bitstream;
-        bin/${host} bin/${bitstream} ${reps} ${run_id}
+        bin/${FPGA}/host bin/${FPGA}/${KERNEL_TYPE}/${bitstream} ${reps} ${run_id} ${FPGA} ${number_cus} ${FP_TYPE}
+        sleep 2
     done
 done
 
