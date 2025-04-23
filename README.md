@@ -65,6 +65,15 @@ For fadd_fabric, with manually unrolled eight adds per burst read (read struct f
     |Total                            |                              |       48|   0| 4878|  6350|    0|  
     +---------------------------------+------------------------------+---------+----+-----+------+-----+
 
+#### estimates
+
+| ops | precision | % of total ff | % of total LUT | 
+| ------------------------------------------------ |
+| 8   | double    | 39.85         | 42.58          |
+| 16  | float     | 56.99         | 59.73          |
+| 32  | half      | 72.61         | 74.79          |
+
+
 ## Versal ACAP
 
 For Versal ACAPs, the [DSP58](https://docs.amd.com/r/2022.1-English/ug1273-versal-acap-design/UltraRAM-Primitives) primitive includes the same features as in UltraScale devices, including a multiplier, adder, pre-adder, and registers to fully pipeline the primitive. However, sizing differs and the primitives include additional features.
