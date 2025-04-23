@@ -38,7 +38,9 @@ dmul,meddsp,0,13,*,0
 dmul,fulldsp,0,13,*,0
 dmul,maxdsp,0,14,*,0
 dsqrt,fabric,0,58,0,sqrt
+drsqrt,fabric,0,111,0,rsqrt
 drsqrt,fulldsp,0,111,0,rsqrt
+drecip,fabric,0,36,0,recip
 drecip,fulldsp,0,36,0,recip
 hadd,fabric,0,9,+,0
 hadd,meddsp,0,12,+,0
