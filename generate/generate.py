@@ -168,10 +168,12 @@ static DT bench(DT val) {{
 if __name__=="__main__":
     gen = Generator()
     gen.generate(csv_file="float_ops.csv")
+    ## debug
     #gen.print_kernels(csv_file="float_ops.csv")
 
     #print("########################################")
     
-    gen.generate_fixed_point_config()
-    gen.generate(csv_file="fixed_point_ops.csv")
+    #gen.generate_fixed_point_config()
+    #gen.generate(csv_file="fixed_point_ops.csv")
+    ## debug
     #gen.print_kernels(csv_file="fixed_point_ops.csv")

@@ -68,7 +68,7 @@ For fadd_fabric, with manually unrolled eight adds per burst read (read struct f
 #### estimates
 
 | ops | precision | % of total ff | % of total LUT | 
-| ------------------------------------------------ |
+| --- | --------- | ------------- | -------------- |
 | 8   | double    | 39.85         | 42.58          |
 | 16  | float     | 56.99         | 59.73          |
 | 32  | half      | 72.61         | 74.79          |
