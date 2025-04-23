@@ -24,7 +24,7 @@ For fadd_fabric, Without unroll, in a dataflow structure, with dedicated read, c
 
 ### pragma hls unroll factor=100
 
-For fadd_fabric, with unroll factor=100, the FF and LUT for the main_compute_loop are expected to account for 97.50% and 97.59% of the total configured FF and LUT resources.
+For fadd_fulldsp, with unroll factor=100, the FF and LUT for the main_compute_loop are expected to account for 97.50% and 97.59% of the total configured FF and LUT resources.
 
 Problem: Implementation leads to very long II~250. Would need to make 100 input elements available at iteration start.
 
@@ -64,6 +64,20 @@ For fadd_fabric, with manually unrolled eight adds per burst read (read struct f
     +---------------------------------+------------------------------+---------+----+-----+------+-----+
     |Total                            |                              |       48|   0| 4878|  6350|    0|  
     +---------------------------------+------------------------------+---------+----+-----+------+-----+
+
+For fadd_fulldsp, with manually unrolled eight adds per burst read, 38.16% and 32.38% of the total configured FF and LUT resources:
+
+    +--------------------------------------------------+---------------------------------------+---------+----+------+------+-----+
+    |                     Instance                     |                 Module                | BRAM_18K| DSP|  FF  |  LUT | URAM|
+    +--------------------------------------------------+---------------------------------------+---------+----+------+------+-----+
+    |control_s_axi_U                                   |control_s_axi                          |        0|   0|   291|   490|    0|  
+    |grp_krnl_bench_Pipeline_main_compute_loop_fu_121  |krnl_bench_Pipeline_main_compute_loop  |        0|  16|  3428|  1746|    0|  
+    |result_port_m_axi_U                               |result_port_m_axi                      |       16|   0|   881|  1052|    0|  
+    |val1_port_m_axi_U                                 |val1_port_m_axi                        |       16|   0|   881|  1052|    0|  
+    |val2_port_m_axi_U                                 |val2_port_m_axi                        |       16|   0|   881|  1052|    0|  
+    +--------------------------------------------------+---------------------------------------+---------+----+------+------+-----+
+    |Total                                             |                                       |       48|  16|  6362|  5392|    0|  
+    +--------------------------------------------------+---------------------------------------+---------+----+------+------+-----+
 
 #### estimates
 
