@@ -65,7 +65,7 @@ For fadd_fabric, with manually unrolled eight adds per burst read (read struct f
     |Total                            |                              |       48|   0| 4878|  6350|    0|  
     +---------------------------------+------------------------------+---------+----+-----+------+-----+
 
-For fadd_fulldsp, with manually unrolled eight adds per burst read, 38.16% and 32.38% of the total configured FF and LUT resources:
+For fadd_fulldsp, with manually unrolled eight adds per burst read, 53.88% and 32.38% of the total configured FF and LUT resources:
 
     +--------------------------------------------------+---------------------------------------+---------+----+------+------+-----+
     |                     Instance                     |                 Module                | BRAM_18K| DSP|  FF  |  LUT | URAM|
