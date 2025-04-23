@@ -42,7 +42,7 @@ Solution: Try manual unroll with eight elements as we can read in burst of eight
     |Total                                             |                                       |       12|   2|  79630|  115745|    0|  
     +--------------------------------------------------+---------------------------------------+---------+----+-------+--------+-----+
 
-###  
+### manual unroll (factor=8 to match 8x64bit burst reads) 
 
 For fadd_fabric, with manually unrolled eight adds per burst read (read struct from ext mem then perf eight adds per iteration) the FF and LUT for the main_compute_loop are expected to account for 39.85% and 42.58% of the total configured FF and LUT resources.
 
