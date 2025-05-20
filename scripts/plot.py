@@ -31,13 +31,13 @@ def gen_op(bitstream: str) -> str:
 
 def gen_dtype(bitstream: str) -> str:
     # div_8_4_fabric.hw.xclbin
-    regex_fixed_point="[a-z]+_\d{1,2}_\d{1,2}_[a-z]+\.hw\.xclbin"
+    regex_fixed_point="[a-z]+_\d{1,2}_\d{1,2}_[a-z]+(\.hw\.xclbin|_single)"
     # dadd_fabric.hw.xclbin
-    regex_floating_point="[a-z]+_[a-z]+\.hw\.xclbin"
+    regex_floating_point="[a-z]+_[a-z]+(\.hw\.xclbin|_single)"
     
     matches_fixed_point = re.findall(regex_fixed_point, bitstream)
     matches_floating_point = re.findall(regex_floating_point, bitstream)
-
+    
     isFixedPoint=False
     isFloatingPoint=False
     if len(matches_fixed_point) > 0:
@@ -132,6 +132,66 @@ def plot(df: pd.DataFrame, target_dir: str, target_filename_prefix: str, col: st
     #plt.show()
 
 def plot_subfigs(df: pd.DataFrame, target_dir: str, target_filename_prefix: str, col: str, yerr: str, ylabel: str, ylim=list()):
+    # Get unique operations
+    unique_ops = df["op"].unique()
+    num_ops = len(unique_ops)
+
+    #cols=3
+    cols=1
+    rows=int(num_ops/3);
+    # Determine grid size (3x3)
+    if 0 != num_ops % 3:
+        rows+=1
+   
+    #figsize=(cols*5,rows*4)
+    figsize=(cols*5,rows*4)
+
+    fig, ax = plt.subplots(nrows=rows, ncols=cols, figsize=figsize)  # Adjust size as needed
+
+    # Filter data for the specific operation
+    df_op = df[df["op"] == unique_ops[0]]
+
+    if "half" not in df_op["dtype"].unique():
+        df_data_half = { 
+                    "impl": "fabric",
+                    "op": unique_ops[0],
+                    "dtype": "half",
+                    f"{yerr}": 0.0,
+                    f"{col}": 0.0
+                }
+        df_op = df_op._append(df_data_half, ignore_index=True)
+
+    # Pivot the data for grouped bar chart
+    df_pivot = df_op.pivot_table(index=['dtype'], values=[col, yerr], columns='impl')
+    
+    # Plot the grouped bar chart with error bars
+    df_pivot[col].plot(kind='bar', yerr=df_pivot[yerr], sharey=True, capsize=0, ax=ax, width=0.8)
+    #plt.text(.01, .99, 'matplotlib', ha='left', va='top', transform=ax.transAxes)
+    ax.set_title(f"{unique_ops[0]}")
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel("")
+    ax.legend()
+    ax.tick_params(axis='x', rotation=45)
+    ax.grid(axis="y")
+    #print(df_pivot[yerr].values)
+    #for j, bar in enumerate(ax.patches):
+    #    height = bar.get_height()
+    #    error = df_pivot[yerr].values  # Get the standard error for this bar
+    #    label_position = height + error / 2  # Add half of the error to the bar height for label position
+
+    #    ax.text(bar.get_x() + bar.get_width() / 2, label_position, f'{height:.2f}', ha='center', va='bottom', fontsize=10)
+         
+    #ylim=[y_mini-2,y_max+2]
+    if len(ylim) > 0:
+        ax.set_ylim(ylim)
+
+    ops_str = "_".join(unique_ops)
+    #print(ops_str)
+    #print(df)
+    plt.tight_layout()
+    plt.savefig(f"{target_dir}/{target_filename_prefix}_{col}_subfigs_{ops_str}.pdf", format='pdf')
+
+def plot_subfigs_three(df: pd.DataFrame, target_dir: str, target_filename_prefix: str, col: str, yerr: str, ylabel: str, ylim=list()):
     # Get unique operations
     unique_ops = df["op"].unique()
     num_ops = len(unique_ops)
@@ -342,7 +402,8 @@ def plot_prep(csv_file: str, target_dir: str, target_filename_prefix: str):
     if "fixed_point" in csv_file:
         precision_type="fixed_point"
     
-    resutil = pd.read_csv(f"{fpga}_resutil_{kernel_type}_{precision_type}.csv")
+    #resutil = pd.read_csv(f"{fpga}_resutil_{kernel_type}_{precision_type}.csv")
+    resutil = pd.read_csv(f"{fpga}_resutil_{kernel_type}_both.csv")
     #resutil = resutil.sort_values(["op", "dtype"], ascending=[True, True])
     # op,dtype,impl,LUT,LUTAsMem,REG,BRAM,URAM,DSP
     resutil["LUT"] = resutil["LUT"].round(3)
@@ -446,7 +507,8 @@ def plot_prep(csv_file: str, target_dir: str, target_filename_prefix: str):
 
     #filters = [["add", "mul", "sub"]]
     #if "floating_point" in csv_file:
-    filters = [["add", "mul", "sub"], ["recip", "rsqrt", "sqrt"], ["div", "exp", "log"]]
+    #filters = [["add", "mul", "sub"], ["recip", "rsqrt", "sqrt"], ["div", "exp", "log"]]
+    filters = [["add"], ["mul"], ["sub"], ["recip"], ["rsqrt"], ["sqrt"], ["div"], ["exp"], ["log"]]
     #elif "fixed-point" in csv_file:
     #    filters = [["add", "mul", "sub"]]
 
@@ -501,7 +563,7 @@ if __name__=="__main__":
             #"sleep_2_sec_between_runs/multi-kernel/runtime_u280_fixed_point.csv"
             #"../output/runtime_u280_fixed_point.csv",
             #"../output/runtime_u280_floating_point.csv"
-            "../output/runtime_u280_both.csv"
+            "runtime_u280_both.csv"
             ]
 
     for f in csv_files:

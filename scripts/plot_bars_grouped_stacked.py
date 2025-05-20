@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import re
-from plot import gen_kernel_type, gen_ylim
+from plot import gen_kernel_type, gen_ylim, gen_dtype
 
 def format_digits(dtypes: list) -> list:
     old = dtypes.copy()
@@ -62,7 +62,7 @@ def gen_impl(bitstream_prefix: str) -> str:
     splits = bitstream_prefix.split("_")
     return splits[len(splits)-1]
   
-def gen_dtype(bitstream_prefix: str) -> str:
+def gen_dtype_old(bitstream_prefix: str) -> str:
     c = bitstream_prefix[0]
     if c == "d":
         return "double"
@@ -88,7 +88,8 @@ labels is a list of the names of the dataframe, used for the legend
 title is a string for the title of the plot
 H is the hatch used for identification of the different dataframe"""
     
-    ops_with_y_axis=["add", "recip", "div"]
+    #ops_with_y_axis=["add", "recip", "div"]
+    ops_with_y_axis=["add", "mul", "sub", "div", "exp", "log", "recip", "rsqrt", "sqrt"]
 
     hatches = ['', '//', '\\\\', '||', '--', '++', 'xx', 'oo', 'OO', '..', '**']
     #hatches = ['', '--', '++', 'xx', 'oo', '//', '\\\\', '||', 'OO', '..', '**']
@@ -104,6 +105,7 @@ H is the hatch used for identification of the different dataframe"""
                       ax=axe,
                       legend=False,
                       grid=False,
+                      figsize=(5,4),
                       **kwargs)  # make bar plots
 
     h,l = axe.get_legend_handles_labels() # get the handles we want to modify
@@ -117,7 +119,7 @@ H is the hatch used for identification of the different dataframe"""
                 rect.set_alpha(.99)
 
     axe.set_xticks((np.arange(0, 2 * n_ind, 2) + 1 / float(n_df + 1)) / 2.) 
-    axe.set_xticklabels(df.index, rotation = 0)
+    axe.set_xticklabels(df.index, rotation = 45)
     axe.set_title(op)
     axe.set_ylim(ylim)
     if op in ops_with_y_axis:
@@ -150,7 +152,7 @@ H is the hatch used for identification of the different dataframe"""
         l2 = plt.legend(n, labels, loc=myloc) 
     axe.add_artist(l1)
     plt.tight_layout()
-    plt.savefig(f"{filename_prefix}_{op}.pdf", format="pdf")
+    plt.savefig(f"{filename_prefix}_resutil_{op}.pdf", format="pdf")
     plt.close()
     #return axe
 
@@ -231,12 +233,12 @@ def gen_dfs(data: pd.DataFrame, filename_prefix: str) -> (list, list):
         dfs = []
         for impl in impls:
             print("########################")
-            print(impl)
+            print(f"{op} -- {impl}")
             print("########################")
             # mydata = [ [lut1, bram1, dsp1, uram1], [lut2, bram2, dsp2, uram2] ...]
             # index = [ dtype, dtype, dtype .. ]
             data_impl = data_op[data_op["impl"]==impl]
-            cols = ['LUT', 'LUTAsMem', 'REG', 'BRAM', 'URAM', 'DSP']
+            cols = ['LUT', 'LUTAsMem', 'REG', 'BRAM', 'DSP']
             myseries = []
             for col in cols:
                 myseries.append(data_impl[col].to_list())
@@ -251,29 +253,40 @@ def gen_dfs(data: pd.DataFrame, filename_prefix: str) -> (list, list):
                     vec.append(myseries[i][j])
                 mydata.append(vec)
           
-            ## set the right position in the mydata array
-            ## order is DOUBLE, FLOAT, HALF
-            ## so if HALF is avail, and DOUBLE and FLOAT are missing,
-            ## need to insert at the start of array
-            #if len(dtypes_local) < len(dtypes_global):
-            #    # fill up empty bars
-            #    n_missing_dtypes = len(dtypes_global)-len(dtypes_local)
-            #    target_positions=[]
-            #    if "double" not in dtypes_local:
-            #        target_positions.append(0)
-            #    if "float" not in dtypes_local:
-            #        target_positions.append(1)
-            #    if "half" not in dtypes_local:
-            #        target_positions.append(2)
-
-            #    for i in range(0, n_missing_dtypes):
-            #        vec = []
-            #        for j in range(0, len(cols)):
-            #            vec.append(0.0)
-            #        mydata.insert(target_positions[i], vec)
-
-            print(mydata)
             print(dtypes_local)
+            # set the right position in the mydata array
+            # order is DOUBLE, FLOAT, HALF
+            # so if HALF is avail, and DOUBLE and FLOAT are missing,
+            # need to insert at the start of array
+            if len(dtypes_local) < len(dtypes_global):
+                # fill up empty bars
+                n_missing_dtypes = len(dtypes_global)-len(dtypes_local)
+                target_positions=[]
+                fixed_point_types=["8_3","8_4","16_6","16_8","32_12","32_16","64_12","64_24"]
+                if "double" not in dtypes_local:
+                    target_positions.append(0+8)
+                if "float" not in dtypes_local:
+                    target_positions.append(1+8)
+                if "half" not in dtypes_local:
+                    target_positions.append(2+8)
+               
+                print(target_positions)
+                if impl not in ["fabric", "dsp"]:
+                    # add all fixed point types
+                    for idx, t in enumerate(fixed_point_types):
+                        target_positions.append(idx)
+
+                target_positions=sorted(target_positions)
+                print(target_positions)
+
+                for i in range(0, n_missing_dtypes):
+                    vec = []
+                    for j in range(0, len(cols)):
+                        vec.append(0.0)
+                    mydata.insert(target_positions[i], vec)
+            else:
+                print("No need to add target_positions or insert 0.0's")
+            print(mydata)
             print(cols)
             print("#######")
             print(len(mydata))
@@ -282,13 +295,14 @@ def gen_dfs(data: pd.DataFrame, filename_prefix: str) -> (list, list):
             dfs.append(pd.DataFrame(mydata, index=dtypes_global, columns=cols))
 
         for df in dfs:
-            print(df.head(10))
+            print(df.head(100))
 
         # multi-kernel ylim
         ylim=[0,60]
         if "single_kernel" in filename_prefix:
             #ylim=[0,6.0] # single op
-            ylim=[0,10.0] # 8-way vec
+            #ylim=[0,10.0] # 8-way vec
+            ylim=[0,30.0] # 8-way vec, across all fixed-point and floating-point
 
         #plot_clustered_stacked(dfs, f"plotted_util/{op}_{filename}", impls)
         plot_clustered_stacked_stackoverflow(dfs, op, filename_prefix, ylim=ylim, labels=impls, cmap=plt.cm.Pastel2) #cmap=plt.cm.viridis)
@@ -298,7 +312,7 @@ if __name__=="__main__":
     #kernel_types = ["single_kernel", "multi_kernel"]
     kernel_types = ["single_kernel"]
     for kernel_type in kernel_types:
-        data = pd.read_csv(f"u280_resutil_{kernel_type}.csv")
+        data = pd.read_csv(f"u280_resutil_{kernel_type}_both.csv")
 
         data["bitstream_path"] = data.apply(lambda row: gen_bitstream_path(row.bitstream), axis=1)
         data["bitstream_prefix"] = data.apply(lambda row: gen_bitstream_prefix(row.bitstream_path), axis=1)
@@ -321,6 +335,6 @@ if __name__=="__main__":
         #gen_dfs(floating_point, f"u280_floating_point_{kernel_type}")
         #gen_dfs(fixed_point, f"u280_fixed_point_{kernel_type}")
 
-        data[['bitstream', 'bitstream_prefix', 'op', 'dtype', 'impl', 'LUT', 'LUTAsMem', 'REG', 'BRAM', 'URAM', 'DSP']].to_csv(f"u280_resutil_{kernel_type}_both.csv")
+        data[['bitstream', 'bitstream_prefix', 'op', 'dtype', 'impl', 'LUT', 'LUTAsMem', 'REG', 'BRAM', 'DSP']].to_csv(f"u280_resutil_{kernel_type}_both.csv")
         gen_dfs(data, f"u280_both_{kernel_type}")
 
