@@ -30,17 +30,42 @@ def gen_op(bitstream: str) -> str:
         return splits[0][1:]
 
 def gen_dtype(bitstream: str) -> str:
+    # div_8_4_fabric.hw.xclbin
+    regex_fixed_point="[a-z]+_\d{1,2}_\d{1,2}_[a-z]+\.hw\.xclbin"
+    # dadd_fabric.hw.xclbin
+    regex_floating_point="[a-z]+_[a-z]+\.hw\.xclbin"
+    
+    matches_fixed_point = re.findall(regex_fixed_point, bitstream)
+    matches_floating_point = re.findall(regex_floating_point, bitstream)
+
+    isFixedPoint=False
+    isFloatingPoint=False
+    if len(matches_fixed_point) > 0:
+        isFixedPoint=True
+    elif len(matches_floating_point) > 0:
+        isFloatingPoint=True
+    else:
+        raise ValueError('gen_dtype: Couldnt detect fixed-point or floating-point')
+
     splits = bitstream.split("/")
     c = splits[len(splits)-1][0]
-    if c == "d":
-        return "double"
-    elif c == "f":
-        return "float"
-    elif c == "h":
-        return "half"
-    else:
+    if isFloatingPoint:
+        if c == "d":
+            return "double"
+        elif c == "f":
+            return "float"
+        elif c == "h":
+            return "half"
+        else:
+            raise ValueError('gen_dtype: Detected floating-point but couldnt detect dtype')
+    
+    if isFixedPoint:
         # add_64_12_dsp.hw.xclbin
         lastpart = splits[len(splits)-1]
+    
+        lastpart = lastpart.replace("8_3", "08_3")
+        lastpart = lastpart.replace("8_4", "08_4")
+
         pattern = "[a-z]+_(\d{1,2}_\d{1,2})"
         matches = re.search(pattern, lastpart)
         if matches:
@@ -49,7 +74,7 @@ def gen_dtype(bitstream: str) -> str:
             #    return dtype_found[1:]
             return dtype_found
         else:
-            raise ValueError('gen_dtype: Couldnt detect dtype')
+            raise ValueError('gen_dtype: Detected fixed-point but couldnt detect dtype')
 
 def gen_impl(bitstream: str) -> str:
     # mydir/fadd_fulldsp.hw.xclbin
@@ -85,7 +110,6 @@ def average_with_std(df: pd.DataFrame, col: str) -> pd.DataFrame:
     df_grouped = df.groupby(["impl", "op", "dtype"])[col].agg(['mean', 'std']).reset_index()
     # Rename columns
     df_grouped.columns = ['impl', 'op', 'dtype', f"avg_{col}", f"std_{col}"]
-
     return df_grouped
 
 def plot(df: pd.DataFrame, target_dir: str, target_filename_prefix: str, col: str, yerr: str, ylabel: str):
@@ -265,7 +289,7 @@ def plot_prep(csv_file: str, target_dir: str, target_filename_prefix: str):
     data["op"] = data.apply(lambda row: gen_op(row.bitstream), axis=1)
     data["dtype"] = data.apply(lambda row: gen_dtype(row.bitstream), axis=1)
     data["impl"] = data.apply(lambda row: gen_impl(row.bitstream), axis=1)
-
+   
     #runtime = df[["op", "dtype", "impl", "total_runtime_ms"]]
     runtime = data[["op", "dtype", "impl", "execute_ms"]].copy(deep=True)
     power = data[["op", "dtype", "impl", "power_w"]].copy(deep=True)
@@ -420,9 +444,9 @@ def plot_prep(csv_file: str, target_dir: str, target_filename_prefix: str):
     ylim_power = gen_ylim(power_grouped, col="power_w")
     ylim_energy = gen_ylim(energy_grouped, col="energy_j")
 
-    filters = [["add", "mul", "sub"]]
-    if "floating_point" in csv_file:
-        filters = [["add", "mul", "sub"], ["recip", "rsqrt", "sqrt"], ["div", "exp", "log"]]
+    #filters = [["add", "mul", "sub"]]
+    #if "floating_point" in csv_file:
+    filters = [["add", "mul", "sub"], ["recip", "rsqrt", "sqrt"], ["div", "exp", "log"]]
     #elif "fixed-point" in csv_file:
     #    filters = [["add", "mul", "sub"]]
 
@@ -471,10 +495,13 @@ def plot_prep(csv_file: str, target_dir: str, target_filename_prefix: str):
 
 if __name__=="__main__":
     csv_files = [ 
-            "sleep_2_sec_between_runs/single-kernel/runtime_u280_floating_point.csv",
-            "sleep_2_sec_between_runs/single-kernel/runtime_u280_fixed_point.csv",
-            "sleep_2_sec_between_runs/multi-kernel/runtime_u280_floating_point.csv",
-            "sleep_2_sec_between_runs/multi-kernel/runtime_u280_fixed_point.csv"
+            #"sleep_2_sec_between_runs/single-kernel/runtime_u280_floating_point.csv",
+            #"sleep_2_sec_between_runs/single-kernel/runtime_u280_fixed_point.csv",
+            #"sleep_2_sec_between_runs/multi-kernel/runtime_u280_floating_point.csv",
+            #"sleep_2_sec_between_runs/multi-kernel/runtime_u280_fixed_point.csv"
+            #"../output/runtime_u280_fixed_point.csv",
+            #"../output/runtime_u280_floating_point.csv"
+            "../output/runtime_u280_both.csv"
             ]
 
     for f in csv_files:
@@ -482,7 +509,8 @@ if __name__=="__main__":
         if "u280" in f:
             fpga="u280"
         splits=f.split("/")
-        kernel_type=splits[len(splits)-2] # single/multi
+        #kernel_type=splits[len(splits)-2] # single/multi
+        kernel_type="single_kernel"
         csv_name=splits[len(splits)-1][:-4] # without .csv
         tdir=f"plotted/{fpga}/{kernel_type}"
         os.system(f"mkdir -p {tdir}")

@@ -251,26 +251,26 @@ def gen_dfs(data: pd.DataFrame, filename_prefix: str) -> (list, list):
                     vec.append(myseries[i][j])
                 mydata.append(vec)
           
-            # set the right position in the mydata array
-            # order is DOUBLE, FLOAT, HALF
-            # so if HALF is avail, and DOUBLE and FLOAT are missing,
-            # need to insert at the start of array
-            if len(dtypes_local) < len(dtypes_global):
-                # fill up empty bars
-                n_missing_dtypes = len(dtypes_global)-len(dtypes_local)
-                target_positions=[]
-                if "double" not in dtypes_local:
-                    target_positions.append(0)
-                if "float" not in dtypes_local:
-                    target_positions.append(1)
-                if "half" not in dtypes_local:
-                    target_positions.append(2)
+            ## set the right position in the mydata array
+            ## order is DOUBLE, FLOAT, HALF
+            ## so if HALF is avail, and DOUBLE and FLOAT are missing,
+            ## need to insert at the start of array
+            #if len(dtypes_local) < len(dtypes_global):
+            #    # fill up empty bars
+            #    n_missing_dtypes = len(dtypes_global)-len(dtypes_local)
+            #    target_positions=[]
+            #    if "double" not in dtypes_local:
+            #        target_positions.append(0)
+            #    if "float" not in dtypes_local:
+            #        target_positions.append(1)
+            #    if "half" not in dtypes_local:
+            #        target_positions.append(2)
 
-                for i in range(0, n_missing_dtypes):
-                    vec = []
-                    for j in range(0, len(cols)):
-                        vec.append(0.0)
-                    mydata.insert(target_positions[i], vec)
+            #    for i in range(0, n_missing_dtypes):
+            #        vec = []
+            #        for j in range(0, len(cols)):
+            #            vec.append(0.0)
+            #        mydata.insert(target_positions[i], vec)
 
             print(mydata)
             print(dtypes_local)
@@ -287,14 +287,16 @@ def gen_dfs(data: pd.DataFrame, filename_prefix: str) -> (list, list):
         # multi-kernel ylim
         ylim=[0,60]
         if "single_kernel" in filename_prefix:
-            ylim=[0,6.0]
+            #ylim=[0,6.0] # single op
+            ylim=[0,10.0] # 8-way vec
 
         #plot_clustered_stacked(dfs, f"plotted_util/{op}_{filename}", impls)
         plot_clustered_stacked_stackoverflow(dfs, op, filename_prefix, ylim=ylim, labels=impls, cmap=plt.cm.Pastel2) #cmap=plt.cm.viridis)
 
 if __name__=="__main__":
 
-    kernel_types = ["single_kernel", "multi_kernel"]
+    #kernel_types = ["single_kernel", "multi_kernel"]
+    kernel_types = ["single_kernel"]
     for kernel_type in kernel_types:
         data = pd.read_csv(f"u280_resutil_{kernel_type}.csv")
 
@@ -309,14 +311,16 @@ if __name__=="__main__":
         data.replace("8_4", "08_4", inplace=True)
         data.sort_values(by=["dtype", "impl"], ascending=[True, True], inplace=True) 
 
-        floating_point = data[data["floating_point_type"]==1]
-        fixed_point = data[data["floating_point_type"]==0]
-        
-        # save as csv
-        floating_point[['bitstream', 'bitstream_prefix', 'op', 'dtype', 'impl', 'LUT', 'LUTAsMem', 'REG', 'BRAM', 'URAM', 'DSP']].to_csv(f"u280_resutil_{kernel_type}_floating_point.csv")
-        fixed_point[['bitstream', 'bitstream_prefix', 'op', 'dtype', 'impl', 'LUT', 'LUTAsMem', 'REG', 'BRAM', 'URAM', 'DSP']].to_csv(f"u280_resutil_{kernel_type}_fixed_point.csv")
+        #floating_point = data[data["floating_point_type"]==1]
+        #fixed_point = data[data["floating_point_type"]==0]
+        #
+        ## save as csv
+        #floating_point[['bitstream', 'bitstream_prefix', 'op', 'dtype', 'impl', 'LUT', 'LUTAsMem', 'REG', 'BRAM', 'URAM', 'DSP']].to_csv(f"u280_resutil_{kernel_type}_floating_point.csv")
+        #fixed_point[['bitstream', 'bitstream_prefix', 'op', 'dtype', 'impl', 'LUT', 'LUTAsMem', 'REG', 'BRAM', 'URAM', 'DSP']].to_csv(f"u280_resutil_{kernel_type}_fixed_point.csv")
 
-        gen_dfs(floating_point, f"u280_floating_point_{kernel_type}")
-        gen_dfs(fixed_point, f"u280_fixed_point_{kernel_type}")
+        #gen_dfs(floating_point, f"u280_floating_point_{kernel_type}")
+        #gen_dfs(fixed_point, f"u280_fixed_point_{kernel_type}")
 
+        data[['bitstream', 'bitstream_prefix', 'op', 'dtype', 'impl', 'LUT', 'LUTAsMem', 'REG', 'BRAM', 'URAM', 'DSP']].to_csv(f"u280_resutil_{kernel_type}_both.csv")
+        gen_dfs(data, f"u280_both_{kernel_type}")
 
