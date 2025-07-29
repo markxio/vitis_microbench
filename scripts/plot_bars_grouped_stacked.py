@@ -148,11 +148,25 @@ H is the hatch used for identification of the different dataframe"""
 
     #l1 = axe.legend(h[:n_col], l[:n_col], loc=[1.01, 0.5])
 
+    #legend_impl = {
+    #            "add": "top left",
+    #            #"mul": "",
+    #            #"sub": "",
+    #            "div": "top left",
+    #            #"exp": "",
+    #            #"log": "",
+    #            "recip": "top left"#,
+    #            #"rsqrt": "",
+    #            #"sqrt": ""
+    #        }
+
     # for floating_point:
     myloc = "upper right"
     if "fixed" in filename_prefix:
         myloc = "upper left"
-    l1 = axe.legend(h[:n_col], l[:n_col], loc=myloc)
+    has_resutil_legend = ["add", "div", "recip"]
+    if op in has_resutil_legend:
+        l1 = axe.legend(h[:n_col], l[:n_col], loc=myloc) # resources (lut, lutasmem, reg, ..)
 
     myloc = "upper left"
     if "fixed" in filename_prefix:
@@ -160,8 +174,9 @@ H is the hatch used for identification of the different dataframe"""
 
     if labels is not None:
         #l2 = plt.legend(n, labels, loc=[1.01, 0.1]) 
-        l2 = plt.legend(n, labels, loc=myloc) 
-    axe.add_artist(l1)
+        l2 = plt.legend(n, labels, loc=myloc) # impl types
+    if op in has_resutil_legend:
+        axe.add_artist(l1)
     plt.tight_layout()
     plt.savefig(f"{filename_prefix}_resutil_{op}.pdf", format="pdf")
     plt.close()
@@ -320,8 +335,20 @@ def gen_dfs(data: pd.DataFrame, filename_prefix: str) -> (list, list):
         if "single_kernel" in filename_prefix:
             #ylim=[0,6.0] # single op
             #ylim=[0,10.0] # 8-way vec
-            ylim=[0,30.0] # 8-way vec, across all fixed-point and floating-point
-
+            #ylim=[0,30.0] # 8-way vec, across all fixed-point and floating-point
+            
+            ylims={
+                    "add": [0,6.0],
+                    "mul": [0,8.0],
+                    "sub": [0,6.0],
+                    "div": [0,30.0],
+                    "exp": [0,8.0],
+                    "log": [0,10.0],
+                    "recip": [0,22.0],
+                    "rsqrt": [0,10.0],
+                    "sqrt": [0,6.0]
+                    }
+            ylim=ylims[op]
         #plot_clustered_stacked(dfs, f"plotted_util/{op}_{filename}", impls)
         plot_clustered_stacked_stackoverflow(dfs, op, filename_prefix, ylim=ylim, labels=impls, cmap=plt.cm.Pastel2) #cmap=plt.cm.viridis)
 
