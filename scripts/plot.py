@@ -9,6 +9,47 @@ import json
 def pprint(mydict: dict):
     print(json.dumps(mydict, sort_keys=True, indent=4))
 
+def diff_int_vs_frac_bits(op: str, impl: str, bits: int, input_in_percent: bool, col: str, df: pd.DataFrame):
+    filtered = df[df["op"]==op]
+    filtered = filtered[filtered["impl"]==impl]
+    filtered = filtered[filtered["datatype"].str.startswith(bits)]
+    metric = filtered[col]
+    metric_min = metric.astype("float").min()
+    metric_max = metric.astype("float").max()
+    if input_in_percent:
+        diff = metric_max-metric_min
+    else:
+        diff = (metric_max-metric_min)/metric_min
+        diff = diff*100
+    if metric_min == 0:
+        return 0.00
+    return diff
+
+def diff_across_impls(op: str, dtype: str, input_in_percent: bool, col: str, df: pd.DataFrame):
+    filtered = df[df["op"]==op]
+    filtered = filtered[filtered["datatype"]==dtype]
+    metric = filtered[col]
+    metric_min = metric.astype("float").min()
+    metric_max = metric.astype("float").max()
+    diff = 0.0
+    if input_in_percent:
+        diff = metric_max-metric_min
+    else:
+        diff = (metric_max-metric_min)/metric_min
+        diff = diff*100
+    if metric_min == 0:
+        return 0.00
+    return diff
+
+def norm_bits_scaling(op: str, impl: str, base_dtype: str, col: str, val: float, df: pd.DataFrame):
+    filtered = df[df["op"]==op]
+    filtered = filtered[filtered["impl"]==impl]
+    filtered = filtered[filtered["datatype"]==base_dtype]
+    base_val = filtered[col].astype("float").max() # only one val in series
+    if float(base_val) == 0.0:
+        return 0.0
+    return val / float(base_val)
+
 def gen_kernel_type(bitstream: str) -> str:
     kernel_type = "single-kernel"
     if "_multi" in bitstream:
@@ -131,6 +172,11 @@ def plot(df: pd.DataFrame, target_dir: str, target_filename_prefix: str, col: st
     plt.savefig(f"{target_dir}/{target_filename_prefix}_{col}.pdf", format='pdf')
     #plt.show()
 
+def rename_fixed_point_names(mystr):
+    if "_" in mystr:
+        mystr = "<" + mystr.replace("_", ",") + ">"
+    return mystr
+
 def plot_subfigs(df: pd.DataFrame, target_dir: str, target_filename_prefix: str, col: str, yerr: str, ylabel: str, ylim=list()):
     # Get unique operations
     unique_ops = df["op"].unique()
@@ -160,6 +206,10 @@ def plot_subfigs(df: pd.DataFrame, target_dir: str, target_filename_prefix: str,
                     f"{col}": 0.0
                 }
         df_op = df_op._append(df_data_half, ignore_index=True)
+
+    # rename dtypes with underscore (_) to comma (,) separated integers
+    # eg. from 64_12 to 64,12
+    df_op["dtype"] = df_op["dtype"].apply(lambda x: rename_fixed_point_names(x))
 
     # Pivot the data for grouped bar chart
     df_pivot = df_op.pivot_table(index=['dtype'], values=[col, yerr], columns='impl')
@@ -299,7 +349,7 @@ def plot_subfigs_gpt(df: pd.DataFrame, target_dir: str, target_filename_prefix: 
                 #ax.text(patch.get_x() + patch.get_width() / 2, 36.1, f'±{myerrors[counter]:.2f}', ha='center', fontsize="x-small")#, va='bottom')
                 counter+=1
         #print(counter)
-        exit()
+        #exit()
         # Add yerr labels below each bar label
         #bar_index = 0  # Track which bar (dtype/impl combination) we are processing
         #for col_idx, col in enumerate(df_pivot.columns.levels[0]):  # Loop through the implementations (impl)
@@ -384,7 +434,16 @@ def plot_prep(csv_file: str, target_dir: str, target_filename_prefix: str):
     #tab["runtime"] = runtime_grouped["avg_execute_ms"].round(3).astype(str) + "+-" + runtime_grouped["std_execute_ms"].round(3).astype(str) 
     #tab["power"] = power_grouped["avg_power_w"].round(3).astype(str) + "+-" + power_grouped["std_power_w"].round(3).astype(str) 
     #tab["energy"] = energy_grouped["avg_energy_j"].round(3).astype(str) + "+-" + energy_grouped["std_energy_j"].round(3).astype(str) 
-   
+
+    diff = tab.copy(deep=True)
+    diff = diff[["op", "dtype", "impl", "runtime_str", "power_str", "energy_str"]]
+
+    diff_bits = tab.copy(deep=True)
+    diff_bits = diff_bits[["op", "dtype", "impl", "runtime_str", "power_str", "energy_str"]]
+
+    bits_scaling = tab.copy(deep=True)
+    bits_scaling = bits_scaling[["op", "dtype", "impl", "runtime_str", "power_str", "energy_str"]]
+
     tab["runtime"] = tab["runtime_str"] + "+-" + tab["runtime_std_str"] 
     tab["power"] = tab["power_str"] + "+-" + tab["power_std_str"] 
     tab["energy"] = tab["energy_str"] + "+-" + tab["energy_std_str"] 
@@ -411,10 +470,90 @@ def plot_prep(csv_file: str, target_dir: str, target_filename_prefix: str):
     resutil["REG"] = resutil["REG"].round(3)
     resutil["BRAM"] = resutil["BRAM"].round(3)
     resutil["DSP"] = resutil["DSP"].round(3)
+    resutil["dtype"] = resutil.apply(lambda row: gen_dtype(row.bitstream_prefix), axis=1)
+    resutil = resutil.drop(columns=["Unnamed: 0"])
+    #print(resutil[resutil["op"]=="div"])
+    #print(list(resutil.columns.values))
+    #exit()
     tab = tab.join(resutil[["op","dtype","impl","LUT","LUTAsMem","REG","BRAM","DSP"]].set_index(["op", "impl", "dtype"]), on=["op", "impl", "dtype"])
     tab_csv = f"{target_dir}/total_data_{target_filename_prefix}.csv"
-    print(f"tab_csv: {tab_csv}")
+    #print(f"tab_csv: {tab_csv}")
     tab.to_csv(tab_csv, index=False, float_format="%.3f")
+
+    ###############
+    # diff between impls
+    # e.g., fabric vs dsp
+    ###############
+    diff = diff.join(resutil[["op","dtype","impl","LUT","LUTAsMem","REG","BRAM","DSP"]].set_index(["op", "impl", "dtype"]), on=["op", "impl", "dtype"])
+    diff = diff.rename(columns={"dtype": "datatype"})
+    diff["runtime"]  = diff.apply(lambda row: diff_across_impls(row.op, row.datatype, False, "runtime_str", diff), axis=1)
+    diff["power"]    = diff.apply(lambda row: diff_across_impls(row.op, row.datatype, False, "power_str", diff), axis=1)
+    diff["energy"]   = diff.apply(lambda row: diff_across_impls(row.op, row.datatype, False, "energy_str", diff), axis=1)
+    diff["LUT"]      = diff.apply(lambda row: diff_across_impls(row.op, row.datatype, True, "LUT", diff), axis=1)
+    diff["LUTAsMem"] = diff.apply(lambda row: diff_across_impls(row.op, row.datatype, True, "LUTAsMem", diff), axis=1)
+    diff["REG"]      = diff.apply(lambda row: diff_across_impls(row.op, row.datatype, True, "REG", diff), axis=1)
+    diff["BRAM"]     = diff.apply(lambda row: diff_across_impls(row.op, row.datatype, True, "BRAM", diff), axis=1)
+    diff["DSP"]      = diff.apply(lambda row: diff_across_impls(row.op, row.datatype, True, "DSP", diff), axis=1)
+    diff = diff[diff["impl"]=="fabric"]
+    diff = diff[["op", "datatype", "runtime", "power", "energy", "LUT", "LUTAsMem", "REG", "BRAM", "DSP"]]
+    diff.to_csv(f"{target_dir}/diff_between_impls_{target_filename_prefix}.csv", index=False, float_format="%.2f")
+
+
+    ##############
+    # int vs fractional bits
+    # i.e. 8_3 vs 8_4
+    ##############
+    diff_bits = diff_bits.join(resutil[["op","dtype","impl","LUT","LUTAsMem","REG","BRAM","DSP"]].set_index(["op", "impl", "dtype"]), on=["op", "impl", "dtype"])
+    #print(diff_bits[diff_bits["op"]=="div"])
+    # focus on fixed-point only, so exclude any floating-point samples
+    diff_bits = diff_bits[diff_bits["dtype"]!="half"]
+    diff_bits = diff_bits[diff_bits["dtype"]!="float"]
+    diff_bits = diff_bits[diff_bits["dtype"]!="double"]
+
+    diff_bits = diff_bits.rename(columns={"dtype": "datatype"})
+    diff_bits["bits"]  = diff_bits.apply(lambda row: row.datatype.split("_")[0], axis=1)
+    diff_bits["runtime"]  = diff_bits.apply(lambda row: diff_int_vs_frac_bits(row.op, row.impl, row.datatype.split("_")[0], False, "runtime_str", diff_bits), axis=1)
+    diff_bits["power"]    = diff_bits.apply(lambda row: diff_int_vs_frac_bits(row.op, row.impl, row.datatype.split("_")[0], False, "power_str", diff_bits), axis=1)
+    diff_bits["energy"]   = diff_bits.apply(lambda row: diff_int_vs_frac_bits(row.op, row.impl, row.datatype.split("_")[0], False, "energy_str", diff_bits), axis=1)
+    diff_bits["LUT"]      = diff_bits.apply(lambda row: diff_int_vs_frac_bits(row.op, row.impl, row.datatype.split("_")[0], True, "LUT", diff_bits), axis=1)
+    diff_bits["LUTAsMem"] = diff_bits.apply(lambda row: diff_int_vs_frac_bits(row.op, row.impl, row.datatype.split("_")[0], True, "LUTAsMem", diff_bits), axis=1)
+    diff_bits["REG"]      = diff_bits.apply(lambda row: diff_int_vs_frac_bits(row.op, row.impl, row.datatype.split("_")[0], True, "REG", diff_bits), axis=1)
+    diff_bits["BRAM"]     = diff_bits.apply(lambda row: diff_int_vs_frac_bits(row.op, row.impl, row.datatype.split("_")[0], True, "BRAM", diff_bits), axis=1)
+    diff_bits["DSP"]      = diff_bits.apply(lambda row: diff_int_vs_frac_bits(row.op, row.impl, row.datatype.split("_")[0], True, "DSP", diff_bits), axis=1)
+    diff_bits = diff_bits.drop_duplicates(subset=["op", "bits", "impl"], ignore_index=True)
+    diff_bits = diff_bits[["op", "bits", "impl", "runtime", "power", "energy", "LUT", "LUTAsMem", "REG", "BRAM", "DSP"]]
+    diff_bits = diff_bits.sort_values(by=["op", "bits"])
+    diff_bits.to_csv(f"{target_dir}/diff_bits_fixedpointonly_{target_filename_prefix}.csv", index=False, float_format="%.2f")
+
+    ##############
+    # scaling bits 
+    # e.g., (8_3_fabric, 8_4_fabric, 16_6_fabric, 16_8_fabric, ...)
+    # e.g., (8_3_dsp, 8_4_dsp, 16_6_dsp, 16_8_dsp, ...)
+    ##############
+    bits_scaling = bits_scaling.join(resutil[["op","dtype","impl","LUT","LUTAsMem","REG","BRAM","DSP"]].set_index(["op", "impl", "dtype"]), on=["op", "impl", "dtype"])
+    # focus on fixed-point only, so exclude any floating-point samples
+    bits_scaling = bits_scaling[bits_scaling["dtype"]!="half"]
+    bits_scaling = bits_scaling[bits_scaling["dtype"]!="float"]
+    bits_scaling = bits_scaling[bits_scaling["dtype"]!="double"]
+
+    bits_scaling = bits_scaling.rename(columns={"dtype": "datatype"})
+
+    bits_scaling["runtime"]  = bits_scaling.apply(lambda row: norm_bits_scaling(row.op, row.impl, "08_3", "runtime_str", float(row.runtime_str), bits_scaling), axis=1)
+    bits_scaling["power"]    = bits_scaling.apply(lambda row: norm_bits_scaling(row.op, row.impl, "08_3", "power_str",   float(row.power_str),   bits_scaling), axis=1)
+    bits_scaling["energy"]   = bits_scaling.apply(lambda row: norm_bits_scaling(row.op, row.impl, "08_3", "energy_str",  float(row.energy_str),  bits_scaling), axis=1)
+    bits_scaling["LUT"]      = bits_scaling.apply(lambda row: norm_bits_scaling(row.op, row.impl, "08_3", "LUT",         float(row.LUT),         bits_scaling), axis=1)
+    bits_scaling["LUTAsMem"] = bits_scaling.apply(lambda row: norm_bits_scaling(row.op, row.impl, "08_3", "LUTAsMem",    float(row.LUTAsMem),    bits_scaling), axis=1)
+    bits_scaling["REG"]      = bits_scaling.apply(lambda row: norm_bits_scaling(row.op, row.impl, "08_3", "REG",         float(row.REG),         bits_scaling), axis=1)
+    bits_scaling["BRAM"]     = bits_scaling.apply(lambda row: norm_bits_scaling(row.op, row.impl, "08_3", "BRAM",        float(row.BRAM),        bits_scaling), axis=1)
+    bits_scaling["DSP"]      = bits_scaling.apply(lambda row: norm_bits_scaling(row.op, row.impl, "08_3", "DSP",         float(row.DSP),         bits_scaling), axis=1)
+
+    #bits_scaling = bits_scaling.drop_duplicates(subset=["op", "bits", "impl"], ignore_index=True)
+    bits_scaling = bits_scaling[["op", "datatype", "impl", "runtime", "power", "energy", "LUT", "LUTAsMem", "REG", "BRAM", "DSP"]]
+    bits_scaling = bits_scaling.sort_values(by=["op", "impl", "datatype"])
+    bits_scaling.to_csv(f"{target_dir}/bits_scaling_fixedpointonly_{target_filename_prefix}.csv", index=False, float_format="%.4f")
+
+
+    ##############
 
     resutil_stats = tab.copy(deep=True)
     resutil_stats["total"] = tab["LUT"]+tab["LUTAsMem"]+tab["REG"]+tab["BRAM"]+tab["DSP"]
@@ -563,7 +702,8 @@ if __name__=="__main__":
             #"sleep_2_sec_between_runs/multi-kernel/runtime_u280_fixed_point.csv"
             #"../output/runtime_u280_fixed_point.csv",
             #"../output/runtime_u280_floating_point.csv"
-            "runtime_u280_both.csv"
+            "runtime_u280_both.csv",
+            "runtime_vck_both.csv"
             ]
 
     for f in csv_files:
