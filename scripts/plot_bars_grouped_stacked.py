@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import re
-from plot import gen_kernel_type, gen_ylim, gen_dtype
+from plot import gen_kernel_type, gen_ylim, gen_dtype, rename_fixed_point_names
 
 def format_digits(dtypes: list) -> list:
     old = dtypes.copy()
@@ -99,6 +99,17 @@ H is the hatch used for identification of the different dataframe"""
     axe = plt.subplot(111)
 
     for df in dfall : # for each data frame
+        # rename dtypes with underscore (_) to comma (,) separated integers
+        # eg. from 64_12 to 64,12
+        #df.rename(index={"08_3", "<08,3>"})
+        #df.rename(index={"08_4", "<08,4>"})
+        #df.rename(index={"16_6", "<16,6>"})
+        #df.rename(index={"16_8", "<16,8>"})
+        #df.rename(index={"32_12", "<32,12>"})
+        #df.rename(index={"32_16", "<32,16>"})
+        #df.rename(index={"64_12", "<64,12>"})
+        #df.rename(index={"64_24", "<64,24>"})
+
         axe = df.plot(kind="bar",
                       linewidth=0,
                       stacked=True,
@@ -292,7 +303,14 @@ def gen_dfs(data: pd.DataFrame, filename_prefix: str) -> (list, list):
             print(len(mydata))
             print(len(dtypes_local))
             print(len(cols))
-            dfs.append(pd.DataFrame(mydata, index=dtypes_global, columns=cols))
+            dtypes_global_copy = []
+            for x in dtypes_global:
+                if "_" in x:
+                    dtypes_global_copy.append("<" + x.replace("_", ",") + ">")
+                else:
+                    dtypes_global_copy.append(x)
+
+            dfs.append(pd.DataFrame(mydata, index=dtypes_global_copy, columns=cols))
 
         for df in dfs:
             print(df.head(100))
@@ -311,30 +329,32 @@ if __name__=="__main__":
 
     #kernel_types = ["single_kernel", "multi_kernel"]
     kernel_types = ["single_kernel"]
-    for kernel_type in kernel_types:
-        data = pd.read_csv(f"u280_resutil_{kernel_type}_both.csv")
+    fpgas = ["u280", "vck"]
+    for fpga in fpgas:
+        for kernel_type in kernel_types:
+            data = pd.read_csv(f"{fpga}_resutil_{kernel_type}_both.csv")
 
-        data["bitstream_path"] = data.apply(lambda row: gen_bitstream_path(row.bitstream), axis=1)
-        data["bitstream_prefix"] = data.apply(lambda row: gen_bitstream_prefix(row.bitstream_path), axis=1)
-        data["op"] = data.apply(lambda row: gen_op(row.bitstream_prefix), axis=1)
-        data["dtype"] = data.apply(lambda row: gen_dtype(row.bitstream_prefix), axis=1)
-        data["impl"] = data.apply(lambda row: gen_impl(row.bitstream_path), axis=1)
-        data["kernel_type"] = data.apply(lambda row: gen_kernel_type(row.bitstream_path), axis=1)
-        data["floating_point_type"] = data.apply(lambda row: gen_fp_type(row.bitstream_prefix), axis=1)
-        data.replace("8_3", "08_3", inplace=True)
-        data.replace("8_4", "08_4", inplace=True)
-        data.sort_values(by=["dtype", "impl"], ascending=[True, True], inplace=True) 
+            data["bitstream_path"] = data.apply(lambda row: gen_bitstream_path(row.bitstream), axis=1)
+            data["bitstream_prefix"] = data.apply(lambda row: gen_bitstream_prefix(row.bitstream_path), axis=1)
+            data["op"] = data.apply(lambda row: gen_op(row.bitstream_prefix), axis=1)
+            data["dtype"] = data.apply(lambda row: gen_dtype(row.bitstream_prefix), axis=1)
+            data["impl"] = data.apply(lambda row: gen_impl(row.bitstream_path), axis=1)
+            data["kernel_type"] = data.apply(lambda row: gen_kernel_type(row.bitstream_path), axis=1)
+            data["floating_point_type"] = data.apply(lambda row: gen_fp_type(row.bitstream_prefix), axis=1)
+            data.replace("8_3", "08_3", inplace=True)
+            data.replace("8_4", "08_4", inplace=True)
+            data.sort_values(by=["dtype", "impl"], ascending=[True, True], inplace=True) 
 
-        #floating_point = data[data["floating_point_type"]==1]
-        #fixed_point = data[data["floating_point_type"]==0]
-        #
-        ## save as csv
-        #floating_point[['bitstream', 'bitstream_prefix', 'op', 'dtype', 'impl', 'LUT', 'LUTAsMem', 'REG', 'BRAM', 'URAM', 'DSP']].to_csv(f"u280_resutil_{kernel_type}_floating_point.csv")
-        #fixed_point[['bitstream', 'bitstream_prefix', 'op', 'dtype', 'impl', 'LUT', 'LUTAsMem', 'REG', 'BRAM', 'URAM', 'DSP']].to_csv(f"u280_resutil_{kernel_type}_fixed_point.csv")
+            #floating_point = data[data["floating_point_type"]==1]
+            #fixed_point = data[data["floating_point_type"]==0]
+            #
+            ## save as csv
+            #floating_point[['bitstream', 'bitstream_prefix', 'op', 'dtype', 'impl', 'LUT', 'LUTAsMem', 'REG', 'BRAM', 'URAM', 'DSP']].to_csv(f"u280_resutil_{kernel_type}_floating_point.csv")
+            #fixed_point[['bitstream', 'bitstream_prefix', 'op', 'dtype', 'impl', 'LUT', 'LUTAsMem', 'REG', 'BRAM', 'URAM', 'DSP']].to_csv(f"u280_resutil_{kernel_type}_fixed_point.csv")
 
-        #gen_dfs(floating_point, f"u280_floating_point_{kernel_type}")
-        #gen_dfs(fixed_point, f"u280_fixed_point_{kernel_type}")
+            #gen_dfs(floating_point, f"u280_floating_point_{kernel_type}")
+            #gen_dfs(fixed_point, f"u280_fixed_point_{kernel_type}")
 
-        data[['bitstream', 'bitstream_prefix', 'op', 'dtype', 'impl', 'LUT', 'LUTAsMem', 'REG', 'BRAM', 'DSP']].to_csv(f"u280_resutil_{kernel_type}_both.csv")
-        gen_dfs(data, f"u280_both_{kernel_type}")
+            data[['bitstream', 'bitstream_prefix', 'op', 'dtype', 'impl', 'LUT', 'LUTAsMem', 'REG', 'BRAM', 'DSP']].to_csv(f"{fpga}_resutil_{kernel_type}_both.csv")
+            gen_dfs(data, f"{fpga}_both_{kernel_type}")
 
