@@ -220,7 +220,10 @@ def plot_subfigs(df: pd.DataFrame, target_dir: str, target_filename_prefix: str,
     ax.set_title(f"{unique_ops[0]}")
     ax.set_ylabel(ylabel)
     ax.set_xlabel("")
-    ax.legend()
+    if unique_ops[0] == "mul" and col == "avg_execute_ms":
+        ax.legend(loc="upper left")
+    else:
+        ax.legend()
     ax.tick_params(axis='x', rotation=45)
     ax.grid(axis="y")
     #print(df_pivot[yerr].values)
@@ -232,7 +235,29 @@ def plot_subfigs(df: pd.DataFrame, target_dir: str, target_filename_prefix: str,
     #    ax.text(bar.get_x() + bar.get_width() / 2, label_position, f'{height:.2f}', ha='center', va='bottom', fontsize=10)
          
     #ylim=[y_mini-2,y_max+2]
+    #print(f"{col} -- {unique_ops[0]} -- {ylim}")
+    op_has_ylim_map = ["add", "mul", "sub", "div"] # others just use gen_ylim() function 
+    col_has_ylim_map = ["avg_execute_ms", "avg_energy_j"] # "avg_power_w"
+    ylim_map = {
+            "avg_execute_ms": {
+                    "add": [4.0,8.0],
+                    "mul": [4.0,8.0],
+                    "sub": [4.0,8.0],
+                    "div": [4.0,8.0] # others just use the gen_ylim() function
+                },
+            "avg_energy_j": {
+                    "add": [0.11,0.20],
+                    "mul": [0.11,0.20],
+                    "sub": [0.11,0.20],
+                    "div": [0.11,0.20] # others just use the gen_ylim() function
+                }
+            }
+
+    
     if len(ylim) > 0:
+        if col in col_has_ylim_map and unique_ops[0] in op_has_ylim_map:
+            ylim = ylim_map[col][unique_ops[0]]
+        print(f"{col} -- {unique_ops[0]} -- {ylim}")
         ax.set_ylim(ylim)
 
     ops_str = "_".join(unique_ops)
