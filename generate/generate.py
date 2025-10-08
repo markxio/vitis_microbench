@@ -164,3 +164,9 @@ static DT bench(DT val) {{
 
         df = pd.DataFrame(s)
         df.to_csv(output_csv, index=None)
+
+if __name__=="__main__":
+    gen = Generator()
+    gen.generate(csv_file="data/float_ops.csv")
+    gen.generate_fixed_point_config("fixed_point_ops.csv")
+    gen.generate(csv_file="data/fixed_point_ops.csv")
