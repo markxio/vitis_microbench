@@ -1,10 +1,10 @@
 import pandas as pd
 from pathlib import Path
 
-from kernel_template.fixed_point.arithmetic import Kernel as fixed_kernel_arithmetic
-from kernel_template.fixed_point.algebraic import Kernel as fixed_kernel_algebraic
-from kernel_template.floating_point.arithmetic import Kernel as float_kernel_arithmetic
-from kernel_template.floating_point.algebraic import Kernel as float_kernel_algebraic
+from kernel_template.fixed_point.binary import Kernel as fixed_kernel_binary
+from kernel_template.fixed_point.unary import Kernel as fixed_kernel_unary
+from kernel_template.floating_point.binary import Kernel as float_kernel_binary
+from kernel_template.floating_point.unary import Kernel as float_kernel_unary
 
 class Generator:
     # static members
@@ -14,7 +14,7 @@ class Generator:
         return
 
     # add, sub, mul, div
-    def template_arithmetic(self, op, impl, sign):
+    def template_binary(self, op, impl, sign):
         return f"""
 template<typename DT>
 static DT bench(DT val1, DT val2) {{
@@ -25,7 +25,7 @@ static DT bench(DT val1, DT val2) {{
                """
 
     # exp(value), log(value), sqrt(value), rsqrt(), recip()
-    def template_algebraic(self, op, impl, func):
+    def template_unary(self, op, impl, func):
         return f"""
 template<typename DT>
 static DT bench(DT val) {{
@@ -35,29 +35,32 @@ static DT bench(DT val) {{
 }}
                """
 
-    def write_kernel(self, op, impl, dtype, external_data_width, symbol, wordlength=0, integerbits=0) -> bool:
+    def write_kernel(self, isFloatingPoint, op, impl, dtype, external_data_width, symbol, wordlength=0, integerbits=0) -> bool:
         if "add" in op or "sub" in op or "mul" in op or "div" in op:
-            # arithmetic
-            if 3 != len(op):
+            # binary
+            #if 3 != len(op):
+            if isFloatingPoint:
                 precision="floating_point"
-                kernel_str = float_kernel_arithmetic().get(dtype=dtype, external_data_width=external_data_width, op=op, impl=impl, sign=symbol)
+                kernel_str = float_kernel_binary().get(dtype=dtype, external_data_width=external_data_width, op=op, impl=impl, sign=symbol)
             else:
                 precision="fixed_point"
-                kernel_str = fixed_kernel_arithmetic().get(wordlength=wordlength, integerbits=integerbits, external_data_width=external_data_width, op=op, impl=impl, sign=symbol)
+                kernel_str = fixed_kernel_binary().get(wordlength=wordlength, integerbits=integerbits, external_data_width=external_data_width, op=op, impl=impl, sign=symbol)
         else:
-            # algebraic 
+            # unary 
             # TODO: conditionals
             # all fixed point: sqrt, rsqrt, recip
-            if 3 != len(op):
+            #if 3 != len(op):
+            if isFloatingPoint:
                 precision="floating_point"
-                kernel_str = float_kernel_algebraic().get(dtype=dtype, external_data_width=external_data_width, op=op, impl=impl, func=symbol)
+                kernel_str = float_kernel_unary().get(dtype=dtype, external_data_width=external_data_width, op=op, impl=impl, func=symbol)
             else:
                 precision="fixed_point"
-                kernel_str = fixed_kernel_algebraic().get(wordlength=wordlength, integerbits=integerbits, external_data_width=external_data_width, op=op, impl=impl, func=symbol)
+                kernel_str = fixed_kernel_unary().get(wordlength=wordlength, integerbits=integerbits, external_data_width=external_data_width, op=op, impl=impl, func=symbol)
 
         # write kernel to file
         fixed_point=""
-        if 3 == len(op):
+        #if 3 == len(op):
+        if not isFloatingPoint:
             # it's fixed point precision
             fixed_point=str(wordlength) + "_" + str(integerbits) + "_"
 
@@ -97,7 +100,9 @@ static DT bench(DT val) {{
     def generate(self, csv_file: str):
         config = pd.read_csv(csv_file, dtype = {"Sign": str, "Function": str})
 
+        isFloatingPoint=True
         if "WordLength" not in list(config.columns):
+            print("Generating floating-point kernels...")
             # it's the csv for floating-point ops
             # for fixed-point we already added both dtype and external_data_width
             config["dtype"] = config.apply(lambda row: self.add_dtype_col(op=row.Operation), axis=1)
@@ -106,46 +111,41 @@ static DT bench(DT val) {{
             config["WordLength"] = config.apply(lambda row: 0, axis=1)
             config["IntegerBits"] = config.apply(lambda row: 0, axis=1)
         else:
+            print("Generating fixed-point kernels...")
             # fixed-point precision
             config["dtype"]  = config.apply(lambda row: "rien", axis=1)
-
-        ###########################
-        # write kernels to files
-        ###########################
-
-        #config["dtype"]=config["dtype"].astype('|S7')
-        #config["dtype"]=config["dtype"].astype('S1')
-        arithmetic = config[config["Sign"]!="0"]
-
-        if len(arithmetic) > 0:
-            arithmetic["kernel"] = arithmetic.apply(lambda row: self.write_kernel(op=row.Operation, impl=row.Implementation, dtype=row.dtype, external_data_width=row.ExternalDataWidth, symbol=row.Sign, wordlength=row.WordLength, integerbits=row.IntegerBits), axis=1)
+            isFloatingPoint=False
         
-        algebraic = config[config["Function"]!="0"]
+        binary = config[config["Sign"]!="0"]
 
-        if len(algebraic) > 0:
-            algebraic["kernel"] = algebraic.apply(lambda row: self.write_kernel(op=row.Operation, impl=row.Implementation, dtype=row.dtype, external_data_width=row.ExternalDataWidth, symbol=row.Function, wordlength=row.WordLength, integerbits=row.IntegerBits), axis=1)
+        if len(binary) > 0:
+            binary["kernel"] = binary.apply(lambda row: self.write_kernel(isFloatingPoint=isFloatingPoint, op=row.Operation, impl=row.Implementation, dtype=row.dtype, external_data_width=row.ExternalDataWidth, symbol=row.Sign, wordlength=row.WordLength, integerbits=row.IntegerBits), axis=1)
+        
+        unary = config[config["Function"]!="0"]
 
-    def generate_fixed_point_config(self):
+        if len(unary) > 0:
+            unary["kernel"] = unary.apply(lambda row: self.write_kernel(isFloatingPoint=isFloatingPoint, op=row.Operation, impl=row.Implementation, dtype=row.dtype, external_data_width=row.ExternalDataWidth, symbol=row.Function, wordlength=row.WordLength, integerbits=row.IntegerBits), axis=1)
+
+    def generate_fixed_point_config(self, output_csv):
         self.fixed_point_config = {
-                                      # TODO: change to single list once built
-                                      #"op": ["mul", "add", "sub"],
-                                      "op": ["div", "exp", "log", "sqrt", "rsqrt", "recip"],
-                                      "impl": ["fabric", "dsp"],
-                                      "bits": [(8,3), (8,4), (16,6), (16,8), (32,12), (32,16), (64,12), (64,24)] # (W,I)
-                                  }
+            # TODO: change to single list instead of permutation
+            "op": ["mul", "add", "sub", "div", "exp", "log", "sqrt", "rsqrt", "recip"],
+            "impl": ["fabric", "dsp"],
+            "bits": [(8,3), (8,4), (16,6), (16,8), (32,12), (32,16), (64,12), (64,24)] # (W,I)
+        }
 
         s = []
         # get all combinations
         for op in self.fixed_point_config["op"]:
             for impl in self.fixed_point_config["impl"]:
                 for bits in self.fixed_point_config["bits"]:
-                    # fn
+                    # fn/unary
                     if "mul" in op or "add" in op or "sub" in op or "div" in op:
                         fn=0
                     else:
                         fn=op
                         #exit("We're generating fixed point ops and op was neither add, sub or mul")
-                    # sign
+                    # sign/binary
                     if "mul" in op:
                         sign="*"
                     elif "add" in op:
@@ -163,17 +163,4 @@ static DT bench(DT val) {{
                     s.append(pd.Series({"Operation": op, "Implementation": impl, "WordLength": str(bits[0]), "IntegerBits": str(bits[1]), "ExternalDataWidth": external_data_width, "MinLatency": 0, "MaxLatency": 4, "Sign": sign, "Function": fn}))
 
         df = pd.DataFrame(s)
-        df.to_csv("fixed_point_ops.csv", index=None)
-
-if __name__=="__main__":
-    gen = Generator()
-    gen.generate(csv_file="float_ops.csv")
-    ## debug
-    #gen.print_kernels(csv_file="float_ops.csv")
-
-    #print("########################################")
-    
-    #gen.generate_fixed_point_config()
-    #gen.generate(csv_file="fixed_point_ops.csv")
-    ## debug
-    #gen.print_kernels(csv_file="fixed_point_ops.csv")
+        df.to_csv(output_csv, index=None)
