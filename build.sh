@@ -104,7 +104,7 @@ if [ $IF_COMPILE -eq 1 ]; then
         rm -rf reference_files_${FPGA}_${TARGET}_${config}_${KERNEL_TYPE} 
         mkdir -p reference_files_${FPGA}_${TARGET}_${config}_${KERNEL_TYPE} 
 
-        cd reference_files_${FPGA}_${TARGET}_${config}_${KERNEL_TYPE}; v++ -t ${TARGET} --config ../design_${FPGA}.cfg -j 8 --save-temps -O3 -c -k krnl_bench -I'../include' -I"../src/device/${FP_TYPE}" -o"${config}.xo" ../src/device/${FP_TYPE}/${config}.cpp & 
+        cd reference_files_${FPGA}_${TARGET}_${config}_${KERNEL_TYPE}; v++ -t ${TARGET} --config ../config/design_${FPGA}.cfg -j 8 --save-temps -O3 -c -k krnl_bench -I'../include' -I"../src/device/${FP_TYPE}" -o"${config}.xo" ../src/device/${FP_TYPE}/${config}.cpp & 
 
         counter=$((counter+1))
         batch_size=$((batch_size+1))
