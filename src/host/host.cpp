@@ -7,7 +7,7 @@
 #include <sys/time.h>
 #include <CL/cl2.hpp>
 #include <CL/cl_ext_xilinx.h>
-#include "../../vitis-power/vitis-power/vitis-power.hpp"
+#include "vitis-power.hpp"
 
 // Datatype to use, must match the kernel datatype
 // we typecast on the device
@@ -31,6 +31,7 @@ static void execute_on_device(std::vector<cl::Event>&,std::vector<cl::Event>&, i
 static void copy_off(std::vector<cl::Event>&,std::vector<cl::Event>&,std::vector<cl::Event>&, int);
 static void init_problem(int);
 static float getTimeOfComponent(cl::Event&);
+static void check_if_binary_op(const char *binary_filename, bool &binary_op);
 
 DATA_TYPE *input_data_1, *input_data_2, *result_data; // Input and result data
 
@@ -43,7 +44,7 @@ cl::Buffer *buffer_input_1[NUMBER_CUS], *buffer_input_2[NUMBER_CUS], *buffer_res
 
 int main(int argc, char * argv[]) {    
   if (argc != 7) {
-    printf("You must supply two command line arguments, the bitstream file, the number of data elements, run_id, device typ (u280 or vck), number_cus and FP_TYPE\n");
+    printf("You must supply the following command line arguments: the bitstream file, the number of data elements, run_id, device typ [u280|vck], number_cus and FP_TYPE\n");
     return EXIT_FAILURE;
   }
 
@@ -53,74 +54,16 @@ int main(int argc, char * argv[]) {
   int number_cus=atoi(argv[5]);
   FP_TYPE=argv[6];
 
-  bool arithmetic = false;
- 
-  //////////////////////////////////////////////////////////////////
-  //////////////////////////////////////////////////////////////////
-  // check if arithmetic, then one inputs
-  // else if functions such as sqrt, then two inputs
-
-  std::string add("add");
-  std::string sub("sub");
-  std::string mul("mul");
-  std::string div("div");
-
-  // Create a stringstream and a vector to hold the split parts
-  // get the bitstream filename (stripped by any dirs)
-  //
-  // e.g. dadd_fabric.hw.xclbin
-  // instead of bin/multi/dadd_fabric.hw.xclbin
-  std::string fname(argv[1]);
-  std::istringstream ss(fname);
-  std::string part;
-  std::vector<std::string> parts;
-  
-  // Split by "/"
-  while (std::getline(ss, part, '/')) {
-      parts.push_back(part);
-  }
-  
-  // Get the last part after the final separator
-  std::string f = parts.back(); // bitstream filename
-
-  if (f.find(add) != std::string::npos) {
-    arithmetic = true; 
-    printf("substring %s found in string %s\n", add.c_str(), f.c_str());
-  }
-  if (f.find(sub) != std::string::npos) {
-    arithmetic = true; 
-    printf("substring %s found in string %s\n", sub.c_str(), f.c_str());
-  }
-  if (f.find(mul) != std::string::npos) {
-    arithmetic = true; 
-    printf("substring %s found in string %s\n", mul.c_str(), f.c_str());
-  }
-  if (f.find(div) != std::string::npos) {
-    arithmetic = true; 
-    printf("substring %s found in string %s\n", div.c_str(), f.c_str());
-  }
-
-  // max number of CUs depends on number of supported hbm/ddr connections
-  //if (arithmetic and strstr(DEVICE_TYPE, "u280") != NULL) {
-  //  NUMBER_CUS=16; // 32 hbm ports, two ports per kernel
-  //} else if (!arithmetic and strstr(DEVICE_TYPE, "u280") != NULL) {
-  //  NUMBER_CUS=10; // 32 hbm ports, three ports per kernel
-  //} else if (arithmetic and strstr(DEVICE_TYPE, "vck") != NULL) {
-  //  NUMBER_CUS=42; // assume 84 ddr ports, two ports per kernel
-  //} else if (!arithmetic and strstr(DEVICE_TYPE, "vck") != NULL) {
-  //  NUMBER_CUS=28; // assume 84 ddr ports, three ports per kernel
-  //}
-  //
-  //////////////////////////////////////////////////////////////////
-  //////////////////////////////////////////////////////////////////
+  bool is_binary_op = false;
+  check_if_binary_op(argv[1], is_binary_op);
 
   std::vector<cl::Event> copyOnEvent(NUMBER_CUS), kernelExecutionEvent(NUMBER_CUS), copyOffEvent(NUMBER_CUS);
   double cardPowerAvgInWatt;
 
   init_problem(data_size);
-  init_device(argv[1], data_size, number_cus, arithmetic);
-
-  copy_on(copyOnEvent, number_cus, arithmetic);
+  init_device(argv[1], data_size, number_cus, is_binary_op);
+  copy_on(copyOnEvent, number_cus, is_binary_op);
+  
   bool stop_measurement = false;
   #pragma omp parallel shared(stop_measurement, cardPowerAvgInWatt, copyOnEvent, kernelExecutionEvent) num_threads(2)
   {
@@ -134,11 +77,11 @@ int main(int argc, char * argv[]) {
             cardPowerAvgInWatt = vitis_power::VCK5000::measureFpgaPower(stop_measurement);
           } else {
             throw std::invalid_argument("DEVICE_TYPE not found");
-            //printf("DEVICE_TYPE not found\n");
           }
       }
       stop_measurement = true;
   }
+  
   copy_off(copyOnEvent, kernelExecutionEvent, copyOffEvent, number_cus);
 
   float maxTotalTime=0.0;
@@ -176,6 +119,64 @@ int main(int argc, char * argv[]) {
   return EXIT_SUCCESS;
 }
 
+static void check_if_binary_op(const char *binary_filename, bool &binary_op) {
+  // check if binary_op, then one input
+  // else if functions such as sqrt, then two inputs
+
+  std::string add("add");
+  std::string sub("sub");
+  std::string mul("mul");
+  std::string div("div");
+
+  // Create a stringstream and a vector to hold the split parts
+  // get the bitstream filename (stripped by any dirs)
+  // e.g. dadd_fabric.hw.xclbin
+  // instead of bin/multi/dadd_fabric.hw.xclbin
+  std::string fname(binary_filename);
+  std::istringstream ss(fname);
+  std::string part;
+  std::vector<std::string> parts;
+  
+  // Split by "/"
+  while (std::getline(ss, part, '/')) {
+      parts.push_back(part);
+  }
+  
+  // Get the last part after the final separator
+  std::string f = parts.back(); // bitstream filename
+
+  if (f.find(add) != std::string::npos) {
+    binary_op = true; 
+    printf("substring %s found in string %s\n", add.c_str(), f.c_str());
+  }
+  if (f.find(sub) != std::string::npos) {
+    binary_op = true; 
+    printf("substring %s found in string %s\n", sub.c_str(), f.c_str());
+  }
+  if (f.find(mul) != std::string::npos) {
+    binary_op = true; 
+    printf("substring %s found in string %s\n", mul.c_str(), f.c_str());
+  }
+  if (f.find(div) != std::string::npos) {
+    binary_op = true; 
+    printf("substring %s found in string %s\n", div.c_str(), f.c_str());
+  }
+
+  // max number of CUs depends on number of supported hbm/ddr connections
+  //if (binary_op and strstr(DEVICE_TYPE, "u280") != NULL) {
+  //  NUMBER_CUS=16; // 32 hbm ports, two ports per kernel
+  //} else if (!binary_op and strstr(DEVICE_TYPE, "u280") != NULL) {
+  //  NUMBER_CUS=10; // 32 hbm ports, three ports per kernel
+  //} else if (binary_op and strstr(DEVICE_TYPE, "vck") != NULL) {
+  //  NUMBER_CUS=42; // assume 84 ddr ports, two ports per kernel
+  //} else if (!binary_op and strstr(DEVICE_TYPE, "vck") != NULL) {
+  //  NUMBER_CUS=28; // assume 84 ddr ports, three ports per kernel
+  //}
+  //
+  //////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////
+}
+
 /**
 * Retrieves the time in milliseconds of the OpenCL event execution
 */
@@ -191,12 +192,12 @@ static float getTimeOfComponent(cl::Event & event) {
 * Performs execution on the device by transfering input data, running the kernel, and copying result data back
 * We use OpenCL events here to set the dependencies properly
 */
-static void copy_on(std::vector<cl::Event> & copyOnEvent, int number_cus, bool &arithmetic) {
+static void copy_on(std::vector<cl::Event> & copyOnEvent, int number_cus, bool &is_binary_op) {
   cl_int err;
 
   for (int i=0; i<number_cus; i++) {
       // Queue migration of memory objects from host to device (last argument 0 means from host to device)
-      if (arithmetic) {
+      if (is_binary_op) {
         OCL_CHECK(err, err = command_queue->enqueueMigrateMemObjects({*buffer_input_1[i],*buffer_input_2[i]}, 0, nullptr, &copyOnEvent[i]));
       } else {
         OCL_CHECK(err, err = command_queue->enqueueMigrateMemObjects({*buffer_input_1[i]}, 0, nullptr, &copyOnEvent[i]));
@@ -233,7 +234,7 @@ static void copy_off(std::vector<cl::Event> & copyOnEvent, std::vector<cl::Event
 /**
 * Initiates the FPGA device and sets up the OpenCL context
 */
-static void init_device(char * binary_filename, int data_size, int number_cus, bool &arithmetic) {
+static void init_device(char * binary_filename, int data_size, int number_cus, bool &is_binary_op) {
   cl_int err;
   char buffer[50];
 
@@ -248,7 +249,7 @@ static void init_device(char * binary_filename, int data_size, int number_cus, b
       OCL_CHECK(err, sum_kernel[j]=new cl::Kernel(*program, getKernelName("krnl_bench", j, buffer), &err));
       // Allocate global memory OpenCL buffers that will be copied on and off
       OCL_CHECK(err, buffer_input_1[j]=new cl::Buffer(*context, CL_MEM_USE_HOST_PTR  | CL_MEM_READ_ONLY, data_size * sizeof(DATA_TYPE), input_data_1, &err));
-      if (arithmetic) {
+      if (is_binary_op) {
         OCL_CHECK(err, buffer_input_2[j]=new cl::Buffer(*context, CL_MEM_USE_HOST_PTR  | CL_MEM_READ_ONLY, data_size * sizeof(DATA_TYPE), input_data_2, &err));
       }
       OCL_CHECK(err, buffer_result[j]=new cl::Buffer(*context, CL_MEM_USE_HOST_PTR  | CL_MEM_WRITE_ONLY, data_size * sizeof(DATA_TYPE), result_data, &err));
@@ -256,7 +257,7 @@ static void init_device(char * binary_filename, int data_size, int number_cus, b
       // Set kernel arguments
       int i=0;
       OCL_CHECK(err, err = sum_kernel[j]->setArg(i++, *buffer_input_1[j]));
-      if (arithmetic) {
+      if (is_binary_op) {
         OCL_CHECK(err, err = sum_kernel[j]->setArg(i++, *buffer_input_2[j]));
       }
       OCL_CHECK(err, err = sum_kernel[j]->setArg(i++, *buffer_result[j]));  
@@ -300,7 +301,6 @@ static void write_to_csv(char * binary_filename, int run_id, int elements, float
   std::string device_type(DEVICE_TYPE);
   std::string fp_type(FP_TYPE);
   std::ofstream outFile;
-  //outFile.open(outdir + "/runtime.csv", std::ios_base::trunc);
   outFile.open(outdir + "/runtime_" + device_type + "_" + fp_type + ".csv", std::ios_base::app);
   
   outFile << ss.str();
