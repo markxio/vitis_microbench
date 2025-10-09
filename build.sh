@@ -4,8 +4,8 @@
 ### requires the following params
 ###
 ### see the following files:
-### build_floating_point.sh
-### build_fixed_point.sh
+### build/build_floating_point.sh
+### build/build_fixed_point.sh
 ######################################
 
 ### #TARGET=sw_emu
