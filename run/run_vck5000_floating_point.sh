@@ -60,4 +60,5 @@ bitstreams=(
     "hsub_meddsp.${TARGET}.xclbin"
 )
 
+cd ../
 . ./run.sh

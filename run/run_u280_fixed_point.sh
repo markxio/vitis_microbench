@@ -62,4 +62,5 @@ bitstreams=(
     "sub_8_4_fabric.${TARGET}.xclbin"
 )
 
+cd ../
 . ./run.sh
