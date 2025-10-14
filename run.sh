@@ -7,6 +7,14 @@
 
 # bin/host_arithmetic bin/u280/multi/dadd_fabric.hw.xclbin reps=10000 run_number=1 fpga=u280 cus=10 fp_type=floating-point
 
+if [[ $TARGET == "hw_emu" ]]; then
+    export XCL_EMULATION_MODE=hw_emu
+elif [[ $TARGET == "sw_emu" ]]; then
+    export XCL_EMULATION_MODE=sw_emu
+else
+    unset XCL_EMULATION_MODE
+fi
+
 for bitstream in "${bitstreams[@]}"; do
     if [[ $bitstream == *"add"* ]] || [[ $bitstream == *"sub"* ]] || [[ $bitstream == *"mul"* ]] || [[ $bitstream == *"div"* ]]; then
         if [[ $FPGA == "u280" ]]; then
@@ -34,7 +42,7 @@ for bitstream in "${bitstreams[@]}"; do
 
     for run_id in $(seq 1 $(($number_of_runs))); do
         echo $bitstream;
-        bin/${FPGA}/host bin/${FPGA}/${KERNEL_TYPE}/${bitstream} ${reps} ${run_id} ${FPGA} ${number_cus} ${FP_TYPE}
+        bin/host bin/${FPGA}/${KERNEL_TYPE}/${bitstream} ${reps} ${run_id} ${FPGA} ${number_cus} ${FP_TYPE}
         sleep 2
     done
 done

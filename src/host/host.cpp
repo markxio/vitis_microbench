@@ -7,7 +7,7 @@
 #include <sys/time.h>
 #include <CL/cl2.hpp>
 #include <CL/cl_ext_xilinx.h>
-#include "vitis-power.hpp"
+#include "vitis_power.hpp"
 
 // Datatype to use, must match the kernel datatype
 // we typecast on the device

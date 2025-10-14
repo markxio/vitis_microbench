@@ -92,24 +92,27 @@ echo "KERNEL_TYPE: ${KERNEL_TYPE}"
 echo "IF_COMPILE: ${IF_COMPILE}"
 echo "IF_LINK: ${IF_LINK}"
 echo "NUM_CONFIGS: ${num_configs}"
+echo "BATCH_MAX: ${BATCH_MAX}"
+echo "J_PROCESSES: ${J_PROCESSES}"
 echo "CONFIG_ENDS"
 
 # compile
 if [ $IF_COMPILE -eq 1 ]; then
     for config in "${configs[@]}"; do
-        if [ $counter -ne 0 ]; then
-            cd ..;
-        fi
+        #if [ $counter -ne 0 ]; then
+        #    cd ..;
+        #fi
 
         rm -rf reference_files_${FPGA}_${TARGET}_${config}_${KERNEL_TYPE} 
         mkdir -p reference_files_${FPGA}_${TARGET}_${config}_${KERNEL_TYPE} 
 
-        cd reference_files_${FPGA}_${TARGET}_${config}_${KERNEL_TYPE}; v++ -t ${TARGET} --config ../config/design_${FPGA}.cfg -j 8 --save-temps -O3 -c -k krnl_bench -I'../include' -I"../src/device/${FP_TYPE}" -o"${config}.xo" ../src/device/${FP_TYPE}/${config}.cpp & 
-
+        cd reference_files_${FPGA}_${TARGET}_${config}_${KERNEL_TYPE}; v++ -t ${TARGET} --config ../config/design_${FPGA}.cfg -j ${J_PROCESSES} --save-temps -O3 -c -k krnl_bench -I'../include' -I"../src/device/${FP_TYPE}" -o"${config}.xo" ../src/device/${FP_TYPE}/${config}.cpp & 
+        cd ../ ;
+        
         counter=$((counter+1))
         batch_size=$((batch_size+1))
         
-        if [ $batch_size -eq 8 ]; then
+        if [ $batch_size -eq $BATCH_MAX ]; then
             # run eight linking processes at a time
             # could keep a pool of eight running processes at all times
             # but processes are started at the same time
@@ -132,16 +135,17 @@ fi
 if [ $IF_LINK -eq 1 ]; then
 
     for config in "${configs[@]}"; do
-        type=algebraic
+        type=binary
         if [[ $config == *"add"* ]] || [[ $config == *"sub"* ]] || [[ $config == *"mul"* ]] || [[ $config == *"div"* ]]; then
-            type=arithmetic
+            type=unary
         fi
 
-        cd ../reference_files_${FPGA}_${TARGET}_${config}_${KERNEL_TYPE}; v++ -t ${TARGET} --config ../link_${type}_${FPGA}_${KERNEL_TYPE}.cfg -j 8 --save-temps -O3 -l -o"${config}.${TARGET}.${output_format}" ${config}.xo &
+        cd reference_files_${FPGA}_${TARGET}_${config}_${KERNEL_TYPE}; v++ -t ${TARGET} --config ../config/link_${type}_${FPGA}_${KERNEL_TYPE}.cfg -j ${J_PROCESSES} --save-temps -O3 -l -o"${config}.${TARGET}.${output_format}" ${config}.xo &
+        cd ../ ;
 
         batch_size=$((batch_size+1))
         
-        if [ $batch_size -eq 8 ]; then
+        if [ $batch_size -eq $BATCH_MAX ]; then
             batch_size=0 
             wait
         fi
@@ -155,12 +159,13 @@ batch_size=0
 if [ $IF_LINK -eq 1 ]; then
     if [ "$FPGA" = "vck" ]; then
         for config in "${configs[@]}"; do
-            cd ../reference_files_${FPGA}_${TARGET}_${config}_${KERNEL_TYPE}; v++ -p -t ${TARGET} -f xilinx_vck5000_gen4x8_xdma_2_202210_1 ${config}.${TARGET}.xsa -o ${config}.${TARGET}.xclbin --package.boot_mode=ospi &
+            cd reference_files_${FPGA}_${TARGET}_${config}_${KERNEL_TYPE}; v++ -p -t ${TARGET} -f xilinx_vck5000_gen4x8_xdma_2_202210_1 ${config}.${TARGET}.xsa -o ${config}.${TARGET}.xclbin --package.boot_mode=ospi &
+            cd ../ ;
 
             batch_size=$((batch_size+1))
 
             # finish batch of eight builds before moving on to next            
-            if [ $batch_size -eq 8 ]; then
+            if [ $batch_size -eq $BATCH_MAX ]; then
                 batch_size=0 
                 wait
             fi
@@ -170,5 +175,6 @@ fi
 
 for config in "${configs[@]}"; do
     # copy bitstream to dir
-    cd ../reference_files_${FPGA}_${TARGET}_${config}_${KERNEL_TYPE}; cp ${config}.${TARGET}.xclbin ../bin/${FPGA}/${KERNEL_TYPE}/
+    cd reference_files_${FPGA}_${TARGET}_${config}_${KERNEL_TYPE}; cp ${config}.${TARGET}.xclbin ../bin/${FPGA}/${KERNEL_TYPE}/
+    cd ../ ;
 done

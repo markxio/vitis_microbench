@@ -4,3 +4,9 @@
 [submodule "vitis-data"]
 	path = vitis-data
 	url = git@github.com:markxio/vitis-data.git
+[submodule "vitis_power"]
+	path = vitis_power
+	url = git@github.com:markxio/vitis_power.git
+[submodule "vitis_microbench/vitis_data"]
+	path = vitis_microbench/vitis_data
+	url = git@github.com:markxio/vitis_data.git

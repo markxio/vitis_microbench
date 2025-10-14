@@ -30,7 +30,7 @@ INCLUDES := $(wildcard $(DEVICE_SRCDIR)/*.h)
 OBJECTS  := $(SOURCES:$(DEVICE_SRCDIR)/%.cpp=%.xo)
 
 # Host building global settings
-CXXFLAGS := -I$(XILINX_XRT)/include/ -I$(XILINX_VIVADO)/include/ -I'./vitis-power/vitis-power/' -Wall -O3 -std=c++11 -L$(XILINX_XRT)/lib/ -lhostsupport -lpthread -lrt -lstdc++ -fopenmp
+CXXFLAGS := -I$(XILINX_XRT)/include/ -I$(XILINX_VIVADO)/include/ -I'./vitis_power/vitis_power/' -Wall -O3 -std=c++11 -L$(XILINX_XRT)/lib/ -lhostsupport -lpthread -lrt -lstdc++ -fopenmp
 CXXFLAGS2 := -lxilinxopencl
 
 # Kernel compiler & linker global settings
@@ -62,15 +62,6 @@ host: src/host/host.cpp
   mkdir -p bin
   g++ $(CXXFLAGS) -o bin/host '$<' $(CXXFLAGS2)
 
-host_algebraic: src/host/host_algebraic.cpp
-  mkdir -p bin
-  g++ $(CXXFLAGS) -o bin/host_algebraic '$<' $(CXXFLAGS2)
-
-host_arithmetic: src/host/host_arithmetic.cpp
-  mkdir -p bin
-  g++ $(CXXFLAGS) -o bin/host_arithmetic '$<' $(CXXFLAGS2)
-
-
 .PHONY: emconfig
 emconfig:
   mkdir -p bin
@@ -81,3 +72,10 @@ emconfig:
 .PHONY: clean
 clean:
   rm -f $(HOST_EXE) *mmult.$(TARGET).$(PLATFORM).* *.log *.json *.xo
+
+clean_kernels:
+  rm src/device/fixed_point/*.cpp
+  rm src/device/floating_point/*.cpp
+
+clean_reference_files:
+  rm -rf reference_files_*
