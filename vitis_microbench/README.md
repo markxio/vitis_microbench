@@ -8,7 +8,7 @@ This directory contains three stages, each represented by a subdirectory, that s
 
 ## Generate the benchmark kernels
 
-Generates a .cpp file for each kernel by substituting placeholders in kernel templates. The scripts are provided in the [generate/](generate/) directory. The [data/](data/) directory contains .csv files specifying the kernel configurations for fixed-point and floating-point kernels. For fixed-point, the configuration includes:
+Generates a .cpp file for each kernel by substituting placeholders in kernel templates. The scripts are provided in the [generate/](generate/) directory. The [data/](generate/data/) directory contains .csv files specifying the kernel configurations for fixed-point and floating-point kernels. For fixed-point, the configuration includes:
 - `Operation`: mul, add, sub, div, exp, log, sqrt, rsqrt, recip
 - `Implementation`: fabric or dsp
 - Combinations of `WordLength` and `IntegerBits` (W,I): (8,3), (8,4), (16,6), (16,8), (32,12), (32,16), (64,12), (64,24)
@@ -99,3 +99,10 @@ with the following settings:
 - `bitstreams`: list of bitstreams to run
 
 The kernels write run parameters and runtime, power draw and energy to a .csv file in the created output/ subdirectory in the top-level project dir.
+
+## Plot results
+
+Call the plot.sh script in the [plot/](plot/) subdirectory to generate diagrams. Alternatively:
+```
+python -m vitis_microbench.plot.main $FPGA $TARGET $KERNEL_TYPE $KERNEL_NAME
+```
