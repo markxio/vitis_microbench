@@ -66,6 +66,8 @@ nohup ./build_u280_floating_point.sh &> build_u280_floating_point.log001 &
 
 The [build.sh](../build.sh) scripts will save otherwise temporary files in a directory named `reference_files_${FPGA}_${TARGET}_${config}_${KERNEL_TYPE}`.
 
+From the top-level project directory, remove generated .cpp files with `make clean_kernels` and remove reference_files_* directories with `make clean_reference_files`.
+
 ### Host code
 
 We also have to build the host code. For the host code, we require the git submodule `vitis_power` to read FPGA power draw in cpp on the host:
