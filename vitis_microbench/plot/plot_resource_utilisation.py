@@ -4,7 +4,60 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import re
-from plot import gen_kernel_type, gen_dtype
+#from plot import gen_kernel_type, gen_dtype
+
+def gen_dtype(bitstream: str) -> str:
+    # div_8_4_fabric.hw.xclbin
+    regex_fixed_point="[a-z]+_\d{1,2}_\d{1,2}_[a-z]+(\.hw\.xclbin|_single)"
+    # dadd_fabric.hw.xclbin
+    regex_floating_point="[a-z]+_[a-z]+(\.hw\.xclbin|_single)"
+
+    matches_fixed_point = re.findall(regex_fixed_point, bitstream)
+    matches_floating_point = re.findall(regex_floating_point, bitstream)
+
+    isFixedPoint=False
+    isFloatingPoint=False
+    if len(matches_fixed_point) > 0:
+        isFixedPoint=True
+    elif len(matches_floating_point) > 0:
+        isFloatingPoint=True
+    else:
+        raise ValueError('gen_dtype: Couldnt detect fixed-point or floating-point')
+
+    splits = bitstream.split("/")
+    c = splits[len(splits)-1][0]
+    if isFloatingPoint:
+        if c == "d":
+            return "double"
+        elif c == "f":
+            return "float"
+        elif c == "h":
+            return "half"
+        else:
+            raise ValueError('gen_dtype: Detected floating-point but couldnt detect dtype')
+
+    if isFixedPoint:
+        # add_64_12_dsp.hw.xclbin
+        lastpart = splits[len(splits)-1]
+
+        lastpart = lastpart.replace("8_3", "08_3")
+        lastpart = lastpart.replace("8_4", "08_4")
+
+        pattern = "[a-z]+_(\d{1,2}_\d{1,2})"
+        matches = re.search(pattern, lastpart)
+        if matches:
+            dtype_found = matches.group(1)
+            #if dtype_found[0]=="0":
+            #    return dtype_found[1:]
+            return dtype_found
+        else:
+            raise ValueError('gen_dtype: Detected fixed-point but couldnt detect dtype')
+
+def gen_kernel_type(bitstream: str) -> str:
+    kernel_type = "single-kernel"
+    if "_multi" in bitstream:
+        kernel_type = "multi-kernel"
+    return kernel_type
 
 def gen_bitstream_prefix(mypath: str) -> str:
     #example = "/home/nx08/nx08/markkfpga/vitis_microbench/reference_files_u280_hw_dmul_fabric_multi/_x/"

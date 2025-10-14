@@ -4,12 +4,12 @@ import os
 from vitis_microbench.vitis_data.resource_utilisation import ResourceUtilisation
 
 def load_configs():
-    df = pd.read_csv("../generate/fixed_point_ops.csv")
+    df = pd.read_csv("../generate/data/fixed_point_ops.csv")
     # Operation,Implementation,WordLength,IntegerBits
-    df["config"] = df["Operation"] + "_" + df["WordLength"].astype(str) + "_" + df["IntegerBits"] + "_" + df["Implementation"]
+    df["config"] = df["Operation"] + "_" + df["WordLength"].astype(str) + "_" + df["IntegerBits"].astype(str) + "_" + df["Implementation"]
     configs = df["config"].tolist()
 
-    df = pd.read_csv("../generate/float_ops.csv")
+    df = pd.read_csv("../generate/data/float_ops.csv")
     # Operation,Implementation
     df["config"] = df["Operation"] + "_" + df["Implementation"]
     configs.extend(df["config"].tolist())
@@ -28,7 +28,7 @@ def write_csv_stats(fpga, target, kernel_type, kernel_name, tdir):
     os.system(f"mkdir -p {tdir}")
     for config in configs:
         root_dir = f"reference_files_{fpga}_{target}_{config}_{kernel_type}"
-        resutil = ResourceUtilisation(root_dir=root_dir, binary_name=config, kernel_name=kernel_name)
+        resutil = ResourceUtilisation(root_dir=root_dir, bin_name=config, kernel_name=kernel_name)
 
         synth_data.append(resutil.get_stats_synth())
         synth_slr_data.append(resutil.get_stats_synth(per_slr=True))
