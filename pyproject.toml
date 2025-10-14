@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vitis_microbench"
+version = "0.1.0"
+description = "Microbenchmarking tools and plotting utilities for Vitis"
+authors = [
+  { name = "Mark Klaisoongnoen", email = "mark.klaisoongnoen@ed.ac.uk" }
+]
+readme = "README.md"
+requires-python = ">=3.1"
+dependencies = []

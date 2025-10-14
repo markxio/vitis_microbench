@@ -1,7 +1,7 @@
 from pathlib import Path
 import pandas as pd
 import os
-from vitis_data.resource_utilisation import ResourceUtilisation
+from vitis_microbench.vitis_data.resource_utilisation import ResourceUtilisation
 
 def load_configs():
     df = pd.read_csv("../generate/fixed_point_ops.csv")

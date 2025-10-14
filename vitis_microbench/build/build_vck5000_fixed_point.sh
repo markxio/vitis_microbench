@@ -11,6 +11,9 @@ KERNEL_TYPE=single
 IF_COMPILE=1
 IF_LINK=1
 
+BATCH_MAX=8 # max parallel builds
+J_PROCESSES=8 # 'v++ -j' or parallel processes per build
+
 configs=(
     add_16_6_dsp
     add_16_6_fabric

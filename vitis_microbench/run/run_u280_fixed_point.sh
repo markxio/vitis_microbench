@@ -1,10 +1,13 @@
 #!/bin/bash
 
-TARGET=hw
-number_of_runs=100
+TARGET=sw_emu
+#TARGET=hw
+#number_of_runs=100
+number_of_runs=1
 KERNEL_TYPE=single
 
-reps=10000000 # number of elements
+reps=16 # number of elements
+#reps=10000000 # number of elements
 FPGA=u280
 number_cus=1
 FP_TYPE=fixed_point
