@@ -64,7 +64,7 @@ cd build/
 nohup ./build_u280_floating_point.sh &> build_u280_floating_point.log001 &
 ```
 
-The [build.sh](../build.sh) scripts will save temporary files in a directory named `reference_files_${FPGA}_${TARGET}_${config}_${KERNEL_TYPE}`.
+The [build.sh](../build.sh) scripts will save otherwise temporary files in a directory named `reference_files_${FPGA}_${TARGET}_${config}_${KERNEL_TYPE}`.
 
 ### Host code
 
@@ -98,9 +98,22 @@ with the following settings:
 - `number_cus`: compute units, default is 1 if `KERNEL_TYPE=single`
 - `bitstreams`: list of bitstreams to run
 
-The kernels write run parameters and runtime, power draw and energy to a .csv file in the created output/ subdirectory in the top-level project dir.
+The kernels write run parameters and runtime, power draw and energy to a .csv file in the created output/ subdirectory in the top-level project dir. Run with:
+```
+cd run/
+nohup ./run_u280_floating_point.sh &> run_u280_floating_point.log001 &
+```
 
 ## Plot results
+
+Combine the output/runtime_u280_fixed_point.csv and output/runtime_u280_floating_point.csv results into a single file. 
+```
+cd output/
+cat runtime_u280_fixed_point.csv >> runtime_u280.csv
+cat runtime_u280_floating_point.csv >> runtime_u280.csv
+```
+
+The plot/main.py will get the resource utilisation from csynth and linking reports in the reference_files_* directories created during kernel compilation and linking, using the submodule `vitis_data`, and writes the collected resource utilisation stats to a single location as .csv file before plots and visualisations are generated.
 
 Call the plot.sh script in the [plot/](plot/) subdirectory to generate diagrams. Alternatively:
 ```

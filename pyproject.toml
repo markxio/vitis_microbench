@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64", "wheel"]
+requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -10,5 +10,5 @@ authors = [
   { name = "Mark Klaisoongnoen", email = "mark.klaisoongnoen@ed.ac.uk" }
 ]
 readme = "README.md"
-requires-python = ">=3.1"
+requires-python = ">=3.6"
 dependencies = []
