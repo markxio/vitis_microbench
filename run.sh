@@ -2,10 +2,10 @@
 
 # same host for fixed- and floating-point
 # same host for u280 and vck
-# arithmetic requires two inputs
-# algebraic requires one input
+# binary requires two inputs
+# unary requires one input
 
-# bin/host_arithmetic bin/u280/multi/dadd_fabric.hw.xclbin reps=10000 run_number=1 fpga=u280 cus=10 fp_type=floating-point
+# bin/host bin/u280/multi/dadd_fabric.hw.xclbin reps=10000 run_number=1 fpga=u280 cus=10 fp_type=floating-point
 
 if [[ $TARGET == "hw_emu" ]]; then
     export XCL_EMULATION_MODE=hw_emu

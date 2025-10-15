@@ -4,6 +4,26 @@ The flexible nature of FPGAs provides the ability to tailor data types and arith
 
 Benchmarking the performance and energy-efficiency properties of arithmetic operations, `vitis_microbench` is a benchmark suite for evaluation on the Programmable Logic (PL) of AMD-Xilinx FPGAs, such as the Alveo U280 and Versal VCK5000 and is expected to work with other generations of Xilinx PL. The benchmark suite implements arithmetic operations as microkernels, enabling the individual evaluation of resource utilisation, power draw, runtime performance, and energy usage.
 
+## Benchmark kernel
+
+The benchmark kernel focuses on an elementwise arithmetic vector operation, which is implemented based on the declared data and Vitis implementation type in a pragma statement. For binary operations on two inputs, including addition, multiplication, subtraction and division, the kernel uses two arrays stored in HBM as inputs. For unary operations on a single input, including exponential, logarithmic and square root functions, the kernel uses one array, also stored in HBM. In both cases, the result is written to HBM. 
+
+Benchmark kernels are provided in the [src/device/](src/device) subdirectory and can be (re-)generated from scratch using the provided scripts in the [generate/](vitis_microbench/generate) subdirectory.
+
+## Vitis implementation types
+
+For fixed-point precision:
+- dsp
+- fabric
+
+For floating-point precision:
+- fulldsp
+- maxdsp
+- meddsp
+- fabric
+
+## Resource utilisation, power draw, runtime and energy for add and mul
+
 ![Resource utilisation and power draw for add and mul operations on the Alveo U280](figs/resutil_power.png)
 ![Runtime and energy for add and mul operations on the Alveo U280](figs/runtime_energy.png)
 
